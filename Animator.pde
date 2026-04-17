@@ -170,7 +170,7 @@ void next(){
     //traceFrame.mask(layerFrame);
     tint(255, 200);
     image(traceFrame, width / 2, height / 2);
-    tint(255, 200);
+    tint(255, 160);
     image(layerFrame, width / 2, height / 2);
     imageMode(CORNER);
   }
@@ -178,7 +178,7 @@ void next(){
 }
 
 void saveIncremental(String prefix,String extension) {
-  int savecnt=0;
+  int savecnt=1;
   boolean ok=false;
   String filename="";
   File f;
@@ -225,7 +225,7 @@ void setNewLayer(){
   File layerZero = new File(sketchPath() + "/"+ foldername + "/");
   if(layerZero.exists()){
     println("layerZero exists");
-    int savecnt = 0;
+    int savecnt = 1;
     boolean ok = false;
     while(!ok){
       foldername += getFileNumberPrefix(savecnt);
@@ -257,7 +257,7 @@ void setNewLayer(){
 
 
 void setLastFrame(String prefix, String extension){
-  int savecnt = 0; 
+  int savecnt = 1; 
   boolean ok = false;
   String filename = "";
    File f = null;
@@ -456,7 +456,7 @@ private void setLayerMode(){
        image(bg, width / 2, height / 2);
        imageMode(CORNER);
      }else if(traceMode && traceFrame != null){
-       tint(255, 200);
+       tint(255, 160);
        imageMode(CENTER);
        image(traceFrame, width / 2, height / 2);
        imageMode(CORNER);
@@ -466,7 +466,7 @@ private void setLayerMode(){
   }else{
      layerMode = true;
      boolean ok = false;
-     int savecnt = 0;
+     int savecnt = 1;
      String filename = "";
      File f;
      while(!ok){
@@ -480,7 +480,7 @@ private void setLayerMode(){
      File layer = new File(sketchPath() + "/layer/" + filename);
      if(layer.exists()){
        if(traceMode){
-         tint(255, 200);
+         tint(255, 160);
        }
        layerFrame = loadImage(layer.getPath());
        imageMode(CENTER);
@@ -501,7 +501,7 @@ private void setTraceMode(){
       image(bg, width / 2, height / 2);
       imageMode(CORNER);
     }else if(layerMode && layerFrame != null){
-      tint(255, 200);
+      tint(255, 160);
       imageMode(CENTER);
       image(layerFrame, width / 2, height / 2);
       imageMode(CORNER);
@@ -511,7 +511,7 @@ private void setTraceMode(){
   }else{
     traceMode = true;
     boolean ok = false;
-    int savecnt = 0;
+    int savecnt = 1;
     String filename = "";
     File f;
     while(!ok){
@@ -525,7 +525,7 @@ private void setTraceMode(){
     File trace = new File(sketchPath() + "/trace/" + filename);
     if(trace.exists()){
       if(layerMode){
-        tint(255, 200);
+        tint(255, 160);
       }
       traceFrame = loadImage(trace.getPath());
       imageMode(CENTER);
@@ -569,7 +569,7 @@ void keyPressed(){
  }
  if(keyCode == ALT){
    if(pen == color(0) || pen == color(0, 200)){
-     pen = color(255, 200);
+     pen = color(255, 160);
      println("PEN = WHITE");
    }else{
       pen = color(0, 200); 
