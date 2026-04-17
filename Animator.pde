@@ -48,8 +48,8 @@ PImage layerFrame;
 PImage traceFrame;
 
 void setup(){
-  size(1080, 1080);
-  //fullScreen();
+  //size(1080, 1080);
+  fullScreen();
   background(bgColor);
   setLastFrame("frame", "png");
   mode = SINGLE;
@@ -158,14 +158,16 @@ void next(){
     image(layerFrame, width / 2, height / 2);
     imageMode(CORNER);
   }else if(traceFrame != null && layerFrame == null){
-    println("trace no layer");
     imageMode(CENTER);
     image(traceFrame, width / 2, height / 2);
     imageMode(CORNER);
   }else{
     imageMode(CENTER);
-    traceFrame.mask(layerFrame);
+    //traceFrame.mask(layerFrame);
+    tint(255, 200);
     image(traceFrame, width / 2, height / 2);
+    tint(255, 200);
+    image(layerFrame, width / 2, height / 2);
     imageMode(CORNER);
   }
   points = new ArrayList<Object[]>();
