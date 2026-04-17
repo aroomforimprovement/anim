@@ -16,16 +16,20 @@
 *  l = lake (horizontal mirror) line
 *  i = india (mandala) line
 *  c = layer mode ON / OFF
+*  t = trace mode ON / OFF
 *  r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
 *  n / ctrl = next
 *  o = open file
 *  [ / ] = lighter / darker
+*  a = New Layer
 */
 
 public static final int SINGLE = 101;
 public static final int MIRROR = 102;
 public static final int LAKE = 103;
 public static final int INDIA = 104;
+
+int bgColor = 0;
 
 ArrayList<Object[]> points = new ArrayList<Object[]>();
 ArrayList<String> forwardLoop;
@@ -34,17 +38,19 @@ boolean forwardLoopOn;
 boolean backwardLoopOn;
 int mode;
 boolean layerMode;
+boolean traceMode;
 float brushSize = 5;
 color pen = color(255);
 PImage image;
 PImage bg;
 PImage img;
 PImage layerFrame;
-
+PImage traceFrame;
 
 void setup(){
-  size(1920, 1080);
-  background(0);
+  size(1080, 1080);
+  //fullScreen();
+  background(bgColor);
   setLastFrame("frame", "png");
   mode = SINGLE;
 }
@@ -71,7 +77,7 @@ void createFrames(){
     PImage p = loadImage(savePath("lastFrame.png"));
     image(p, 0, 0);
   }else{
-    background(0);
+    background(bgColor);
   }
   for(Object[] pv : points){
     createFrame(pv, points.indexOf(pv));
@@ -122,21 +128,44 @@ void drawPoint(PVector p, color pen){
 
 void setBg(){
   saveFrame(savePath("bg.png"));
-  bg = loadImage("bg.jpg");
+  bg = loadImage("bg.png");
 }
 
 void next(){
+  if(traceMode){
+    background(bgColor);
+    if(layerMode && layerFrame != null){
+      imageMode(CENTER);
+      image(layerFrame, width / 2, height / 2);
+      imageMode(CORNER);
+    }
+    for(Object[] pv: points){
+      brushSize = (float)pv[2];
+      PVector p = (PVector)pv[0];
+      drawPoint(p, (color) pv[1]);
+    }
+  }
   saveIncremental("frame", "png");
   saveFrame(savePath("lastFrame.png"));
   tint(255, 200);
-  if(layerFrame == null){
+  if(layerFrame == null && traceFrame == null){
     bg = loadImage("bg.png");
     if(bg != null){
       image(bg, 0, 0);
     }
-  }else{
+  }else if(layerFrame != null && traceFrame == null){
     imageMode(CENTER);
     image(layerFrame, width / 2, height / 2);
+    imageMode(CORNER);
+  }else if(traceFrame != null && layerFrame == null){
+    println("trace no layer");
+    imageMode(CENTER);
+    image(traceFrame, width / 2, height / 2);
+    imageMode(CORNER);
+  }else{
+    imageMode(CENTER);
+    traceFrame.mask(layerFrame);
+    image(traceFrame, width / 2, height / 2);
     imageMode(CORNER);
   }
   points = new ArrayList<Object[]>();
@@ -156,8 +185,16 @@ void saveIncremental(String prefix,String extension) {
     if(!f.exists()) ok=true; // File doesn't exist
     savecnt++;
   }
+  if(traceMode){
+    File trace = new File(sketchPath() + "/trace/" + filename);
+    if(trace.exists()){
+      traceFrame = loadImage(sketchPath() + "/trace/" + filename);
+    }else{
+      traceFrame = null;
+    }
+  }
   if(layerMode){
-      File layer = new File(sketchPath() + "\\layer\\"+filename);
+      File layer = new File(sketchPath() + "/layer/"+filename);
       if(layer.exists()){
         layerFrame = loadImage(layer.getPath());
       }else{
@@ -166,6 +203,7 @@ void saveIncremental(String prefix,String extension) {
     }
   println("Saving "+filename);
   saveFrame(savePath(filename));
+  
   if(forwardLoopOn){
     forwardLoop.add(filename);
   }
@@ -178,7 +216,7 @@ void saveIncremental(String prefix,String extension) {
 void setNewLayer(){
   println("setNewLayer");
   String foldername = "layer";
-  File layerZero = new File(sketchPath() + "\\"+ foldername + "\\");
+  File layerZero = new File(sketchPath() + "/"+ foldername + "/");
   if(layerZero.exists()){
     println("layerZero exists");
     int savecnt = 0;
@@ -187,18 +225,18 @@ void setNewLayer(){
       foldername += getFileNumberPrefix(savecnt);
       foldername += savecnt;
       println("foldername: " + foldername);
-      File fo = new File(sketchPath(foldername));
+      File fo = new File(sketchPath() + "/"+ foldername + "/");
       if(!fo.exists()){
         ok = true;
         foldername = "layer" + getFileNumberPrefix(savecnt) + savecnt;
-        layerZero.renameTo(new File(savePath("\\" + foldername + "\\")));
+        layerZero.renameTo(new File(sketchPath() + "/" + foldername + "/"));
       }
       savecnt++;
       
     }
     
   }
-  File newLayerFolder = new File(sketchPath("\\layer\\"));
+  File newLayerFolder = new File(sketchPath() + "/layer/");
     newLayerFolder.mkdir();
     File path = new File(sketchPath());
     File[] files = path.listFiles();
@@ -206,7 +244,7 @@ void setNewLayer(){
       println(i);
       if(files[i].getName().indexOf("png") > 0){
         println("png found");
-        files[i].renameTo(new File(newLayerFolder.getPath() + "\\" + files[i].getName()));
+        files[i].renameTo(new File(newLayerFolder.getPath() + "/" + files[i].getName()));
       }
     }
 }
@@ -395,6 +433,76 @@ private static void copyFrame(File orig, File next){
   }
 }
 
+private void setLayerMode(){
+  println("setLayerMode");
+  if(layerMode){
+     layerMode = false;
+     if(!traceMode && bg != null){
+       image(bg, 0, 0);
+     }else if(traceMode && traceFrame != null){
+       image(traceFrame, 0, 0);
+     }else{
+       background(bgColor);
+     }
+  }else{
+     layerMode = true;
+     boolean ok = false;
+     int savecnt = 0;
+     String filename = "";
+     File f;
+     while(!ok){
+       filename = "frame";
+       filename += getFileNumberPrefix(savecnt);
+       filename += savecnt + ".png";
+       f = new File(savePath(filename));
+       if(!f.exists()) ok = true;
+       savecnt++;
+     }
+     File layer = new File(sketchPath() + "/layer/" + filename);
+     if(layer.exists()){
+       layerFrame = loadImage(layer.getPath());
+       image(layerFrame, 0, 0);
+     }else{
+       layerFrame = null;
+     }
+  }
+}
+
+private void setTraceMode(){
+  println("setTraceMode");
+  if(traceMode){
+    traceMode = false;
+    if(!layerMode && bg != null){
+      image(bg, 0, 0);
+    }else if(layerMode && layerFrame != null){
+      image(layerFrame, 0, 0);
+    }else{
+      background(bgColor);
+    }
+  }else{
+    traceMode = true;
+    boolean ok = false;
+    int savecnt = 0;
+    String filename = "";
+    File f;
+    while(!ok){
+      filename = "frame";
+      filename += getFileNumberPrefix(savecnt);
+      filename += savecnt + ".png";
+      f = new File(savePath(filename));
+      if(!f.exists()) ok = true;
+      savecnt++;
+    }
+    File trace = new File(sketchPath() + "/trace/" + filename);
+    if(trace.exists()){
+      traceFrame = loadImage(trace.getPath());
+      image(traceFrame, 0, 0);
+    }else{
+      traceFrame = null;
+    }
+  }
+}
+
 /*
 *  ENTER = createFrames
 *  SHIFT = setBg
@@ -464,7 +572,7 @@ void keyPressed(){
  }else if(key == '7'){
    brushSize = 60;
  }else if(key == 'x'){
-   background(0);
+   background(bgColor);
  }else if(key == 's'){
    mode = SINGLE;
  }else if(key == 'm'){
@@ -474,11 +582,9 @@ void keyPressed(){
  }else if(key == 'i'){
    mode = INDIA;
  }else if(key == 'c'){
-   if(!layerMode){
-     layerMode = true;
-   }else{
-     layerMode = false;
-   }
+   setLayerMode();
+ }else if(key == 't'){
+   setTraceMode();
  }else if(key == 'a'){
    setNewLayer();
  }else if(key == 'r'){
@@ -507,8 +613,13 @@ void keyPressed(){
    next();
  }else if(key == 'o'){
    selectInput("Choose File", "fileSelected"); 
+ }else if(key == 'k'){
+   if(bgColor == 0){
+     bgColor = 255;
+   }else{
+     bgColor = 0;
+   }
  }else{
     println(key); 
  }
- 
 }
