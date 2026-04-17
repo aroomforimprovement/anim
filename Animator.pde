@@ -440,6 +440,7 @@ private void setLayerMode(){
      if(!traceMode && bg != null){
        image(bg, 0, 0);
      }else if(traceMode && traceFrame != null){
+       tint(255, 200);
        image(traceFrame, 0, 0);
      }else{
        background(bgColor);
@@ -475,6 +476,7 @@ private void setTraceMode(){
     if(!layerMode && bg != null){
       image(bg, 0, 0);
     }else if(layerMode && layerFrame != null){
+      tint(255, 200);
       image(layerFrame, 0, 0);
     }else{
       background(bgColor);
