@@ -75,7 +75,9 @@ void createFrames(){
   if(f.exists()){
     tint(255, 255);
     PImage p = loadImage(savePath("lastFrame.png"));
-    image(p, 0, 0);
+    imageMode(CENTER);
+    image(p, width / 2, height /2);
+    imageMode(CORNER);
   }else{
     background(bgColor);
   }
@@ -151,7 +153,9 @@ void next(){
   if(layerFrame == null && traceFrame == null){
     bg = loadImage("bg.png");
     if(bg != null){
-      image(bg, 0, 0);
+      imageMode(CENTER);
+      image(bg, width / 2, height / 2);
+      imageMode(CORNER);
     }
   }else if(layerFrame != null && traceFrame == null){
     imageMode(CENTER);
@@ -292,10 +296,12 @@ void setLastFrame(String prefix, String extension){
    f = new File(savePath(prefix+savecnt+"."+extension));
    
    println(f.getName());
-   if(f != null && f.exists()){
+   if(f.exists()){
      println("Opening "+filename);
      img = loadImage(f.getName());
-     image(img, 0, 0);
+     imageMode(CENTER);
+     image(img, width / 2, height / 2);
+     imageMode(CORNER);
    }
 }
 
@@ -341,7 +347,9 @@ void renderForwardLoop(){
   }
   forwardLoop = newLoop;
   tint(255, 255);
-  image(loadImage(forwardLoop.get(forwardLoop.size() -1 )), 0, 0);
+  imageMode(CENTER);
+  image(loadImage(forwardLoop.get(forwardLoop.size() -1 )), width / 2, height / 2);
+  imageMode(CORNER);
   println("finished renderForwardLoop");
 }
 
@@ -388,14 +396,18 @@ void renderBackwardLoop(){
   }
   backwardLoop = newLoop;
   tint(255, 255);
+  imageMode(CENTER);
   image(loadImage(backwardLoop.get(backwardLoop.size() -1 )), 0, 0);
+  imageMode(CORNER);
   println("finished renderBackwardLoop");
 }
 
 void fileSelected(File file){
   img = loadImage(file.getName());
   println(file.getName());
-  image(img, 0, 0);
+  imageMode(CENTER);
+  image(img, width / 2, height / 2);
+  imageMode(CORNER);
 }
 
 
@@ -412,7 +424,7 @@ String getFileNumberPrefix(int fileNumber){
 
 private static void copyFrame(File orig, File next){
   InputStream is = createInput(orig);
-  OutputStream os = createOutput(next);;
+  OutputStream os = createOutput(next);
   byte[] buffer = new byte[1024];
   int length;
   try{
@@ -440,10 +452,14 @@ private void setLayerMode(){
   if(layerMode){
      layerMode = false;
      if(!traceMode && bg != null){
-       image(bg, 0, 0);
+       imageMode(CENTER);
+       image(bg, width / 2, height / 2);
+       imageMode(CORNER);
      }else if(traceMode && traceFrame != null){
        tint(255, 200);
-       image(traceFrame, 0, 0);
+       imageMode(CENTER);
+       image(traceFrame, width / 2, height / 2);
+       imageMode(CORNER);
      }else{
        background(bgColor);
      }
@@ -463,8 +479,13 @@ private void setLayerMode(){
      }
      File layer = new File(sketchPath() + "/layer/" + filename);
      if(layer.exists()){
+       if(traceMode){
+         tint(255, 200);
+       }
        layerFrame = loadImage(layer.getPath());
-       image(layerFrame, 0, 0);
+       imageMode(CENTER);
+       image(layerFrame, width / 2, height / 2);
+       imageMode(CORNER);
      }else{
        layerFrame = null;
      }
@@ -476,10 +497,14 @@ private void setTraceMode(){
   if(traceMode){
     traceMode = false;
     if(!layerMode && bg != null){
-      image(bg, 0, 0);
+      imageMode(CENTER);
+      image(bg, width / 2, height / 2);
+      imageMode(CORNER);
     }else if(layerMode && layerFrame != null){
       tint(255, 200);
-      image(layerFrame, 0, 0);
+      imageMode(CENTER);
+      image(layerFrame, width / 2, height / 2);
+      imageMode(CORNER);
     }else{
       background(bgColor);
     }
@@ -499,8 +524,13 @@ private void setTraceMode(){
     }
     File trace = new File(sketchPath() + "/trace/" + filename);
     if(trace.exists()){
+      if(layerMode){
+        tint(255, 200);
+      }
       traceFrame = loadImage(trace.getPath());
-      image(traceFrame, 0, 0);
+      imageMode(CENTER);
+      image(traceFrame, width / 2, height / 2);
+      imageMode(CORNER);
     }else{
       traceFrame = null;
     }
