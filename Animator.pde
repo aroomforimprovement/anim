@@ -178,7 +178,7 @@ void next(){
 }
 
 void saveIncremental(String prefix,String extension) {
-  int savecnt=1;
+  int savecnt = 1;
   boolean ok=false;
   String filename="";
   File f;
@@ -191,16 +191,21 @@ void saveIncremental(String prefix,String extension) {
     if(!f.exists()) ok=true; // File doesn't exist
     savecnt++;
   }
+  
+  int traceCnt = savecnt;
+  if(savecnt == 1){traceCnt=2;}
   if(traceMode){
-    File trace = new File(sketchPath() + "/trace/" + filename);
+    String traceName = prefix + getFileNumberPrefix(traceCnt) + traceCnt + "." + extension; 
+    File trace = new File(sketchPath() + "/trace/" + traceName);
     if(trace.exists()){
-      traceFrame = loadImage(sketchPath() + "/trace/" + filename);
+      traceFrame = loadImage(trace.getPath());
     }else{
       traceFrame = null;
     }
   }
   if(layerMode){
-      File layer = new File(sketchPath() + "/layer/"+filename);
+    String layerName = prefix + getFileNumberPrefix(traceCnt) + traceCnt + "." + extension; 
+      File layer = new File(sketchPath() + "/layer/" + layerName);
       if(layer.exists()){
         layerFrame = loadImage(layer.getPath());
       }else{
