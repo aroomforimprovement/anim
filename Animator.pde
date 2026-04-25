@@ -137,6 +137,7 @@ void next(){
   if(traceMode){
     background(bgColor);
     if(layerMode && layerFrame != null){
+      tint(255, 255);
       imageMode(CENTER);
       image(layerFrame, width / 2, height / 2);
       imageMode(CORNER);
@@ -149,7 +150,7 @@ void next(){
   }
   saveIncremental("frame", "png");
   saveFrame(savePath("lastFrame.png"));
-  tint(255, 200);
+  tint(255, 160);
   if(layerFrame == null && traceFrame == null){
     bg = loadImage("bg.png");
     if(bg != null){
@@ -168,7 +169,7 @@ void next(){
   }else{
     imageMode(CENTER);
     //traceFrame.mask(layerFrame);
-    tint(255, 200);
+    tint(255, 160);
     image(traceFrame, width / 2, height / 2);
     tint(255, 160);
     image(layerFrame, width / 2, height / 2);
@@ -182,7 +183,6 @@ void saveIncremental(String prefix,String extension) {
   boolean ok=false;
   String filename="";
   File f;
-  
   while(!ok) {
     filename = prefix;  
     filename += getFileNumberPrefix(savecnt);
@@ -603,13 +603,13 @@ void keyPressed(){
  }else if(key == '3'){
    brushSize = 15;
  }else if(key == '4'){
-   brushSize = 20;
- }else if(key == '5'){
    brushSize = 30;
- }else if(key == '6'){
+ }else if(key == '5'){
    brushSize = 45;
- }else if(key == '7'){
+ }else if(key == '6'){
    brushSize = 60;
+ }else if(key == '7'){
+   brushSize += 20;
  }else if(key == 'x'){
    background(bgColor);
  }else if(key == 's'){
@@ -644,14 +644,23 @@ void keyPressed(){
  }else if(key == 'y'){
    pen = color(255, 255, 100, 200);
    println("PEN = YELLOW");
+ }else if(key == 'p'){
+   println("PEN = PURPLE");
+   pen = color(221, 211, 255, 20);
+ }else if(key == 'o'){
+   println("PEN = ORANGE");
+   pen = color(255, 190, 107, 20);
+ }else if(key == 'h'){
+   println("PEN = GREY");
+   pen = color(150, 200);
  }else if(key == '['){
    pen -= color(1, 1, 1);
  }else if(key == ']'){
    pen += color(1, 1, 1);
  }else if(key == 'n' || keyCode == CONTROL){
    next();
- }else if(key == 'o'){
-   selectInput("Choose File", "fileSelected"); 
+ //}else if(key == 'o'){
+ //  selectInput("Choose File", "fileSelected"); 
  }else if(key == 'k'){
    if(bgColor == 0){
      bgColor = 255;
@@ -660,5 +669,6 @@ void keyPressed(){
    }
  }else{
     println(key); 
+    println(keyCode);
  }
 }
