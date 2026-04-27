@@ -633,7 +633,7 @@ void keyPressed(){
     pen = color(120, 210, 230, 200);
     println("PEN = BLUE");
  }else if(key == 'g'){
-   pen = color(70, 185, 70, 200);
+   pen = color(30, 145, 30, 10);
    println("PEN = GREEN");
  }else if(key == '9'){
    pen = color(0, 50);
@@ -653,6 +653,9 @@ void keyPressed(){
  }else if(key == 'h'){
    println("PEN = GREY");
    pen = color(150, 200);
+ }else if(key == 'u'){
+   println("PEN = BROWN");
+   pen = color(223, 183, 60, 50);
  }else if(key == '['){
    pen -= color(1, 1, 1);
  }else if(key == ']'){
