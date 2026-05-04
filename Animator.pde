@@ -636,13 +636,13 @@ void keyPressed(){
    pen = color(30, 145, 30, 10);
    println("PEN = GREEN");
  }else if(key == '9'){
-   pen = color(0, 50);
+   pen = color(0, 10);
    println("PEN = SHADE");
  }else if(key == 'w'){
    pen = color(255, 200);
    println("PEN = WHITE");
  }else if(key == 'y'){
-   pen = color(255, 255, 100, 200);
+   pen = color(255, 255, 100, 10);
    println("PEN = YELLOW");
  }else if(key == 'p'){
    println("PEN = PURPLE");
@@ -656,6 +656,9 @@ void keyPressed(){
  }else if(key == 'u'){
    println("PEN = BROWN");
    pen = color(223, 183, 60, 50);
+ }else if(key == 'z'){
+   println("PEN = TRANS");
+   pen = color(255, 10);
  }else if(key == '['){
    pen -= color(1, 1, 1);
  }else if(key == ']'){
