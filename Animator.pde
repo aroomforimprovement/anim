@@ -32,6 +32,7 @@ public static final int INDIA = 104;
 int bgColor = 0;
 
 ArrayList<Object[]> points = new ArrayList<Object[]>();
+ArrayList<Object[]> bgPoints = new ArrayList<Object[]>();
 ArrayList<String> forwardLoop;
 ArrayList<String> backwardLoop;
 boolean forwardLoopOn;
@@ -67,7 +68,7 @@ void mouseDragged(){
   arr[2] = brushSize;
   arr[3] = mode;
   points.add(arr);
-  drawPoint(p, pen);
+  drawPoint(p, pen, mode, brushSize);
 }
 
 void createFrames(){
@@ -96,13 +97,13 @@ void createFrame(Object[] pv, int i){
   brushSize = (float)pv[2];
   PVector p = (PVector)pv[0];
   mode = (int) pv[3];
-  drawPoint(p, (color) pv[1]);
+  drawPoint(p, (color) pv[1], mode, brushSize);
   if(i%20 == 0){
     saveIncremental("frame", "png");
   }
 }
 
-void drawPoint(PVector p, color pen){
+void drawPoint(PVector p, color pen, int mode, float brushSize){
   stroke(pen);
   fill(pen);
   switch(mode){
@@ -129,8 +130,43 @@ void drawPoint(PVector p, color pen){
 }
 
 void setBg(){
+  
+  bgPoints = points;
+  saveBgData();
   saveFrame(savePath("bg.png"));
   bg = loadImage("bg.png");
+}
+
+void saveBgData(){
+  PrintWriter output = createWriter("bg.txt");
+  for(Object[] pv: bgPoints){
+    output.println(pv[0] + "|" + pv[1] + "|" + pv[2] + "|" + pv[3]);
+  }
+  output.flush();
+  output.close();
+}
+
+void drawBgFromData(){
+  File f = new File(sketchPath("bg.txt"));
+  if(f.exists()){
+    String[] lines = loadStrings("bg.txt");
+    for(String s : lines){
+      println("STRING HERE: " + s);
+      String[] p = s.split("\\|");
+      for(String thisString : p){println(thisString);}
+      p[0] = p[0].replace("[ ", "").replace(" ]", "");
+      String[] coS = p[0].split(",");
+      float[] coords = new float[2];
+      for(int i = 0; i < coS.length-1; i++){coords[i] = float(coS[i]);}
+      PVector pv = new PVector(coords[0], coords[1]);
+      color c = color(int(p[1]));
+      float size = float(p[2]);
+      println("MODE HERE: " + p[3]);
+      int m = int(p[3]);
+      println("MODE HERE: " + m);
+      drawPoint(pv, c, m, size);
+    }
+  }
 }
 
 void next(){
@@ -145,8 +181,9 @@ void next(){
     for(Object[] pv: points){
       brushSize = (float)pv[2];
       PVector p = (PVector)pv[0];
-      drawPoint(p, (color) pv[1]);
+      drawPoint(p, (color) pv[1], (int) pv[3], brushSize);
     }
+    drawBgFromData();
   }
   saveIncremental("frame", "png");
   saveFrame(savePath("lastFrame.png"));
@@ -162,10 +199,12 @@ void next(){
     imageMode(CENTER);
     image(layerFrame, width / 2, height / 2);
     imageMode(CORNER);
+    drawBgFromData();
   }else if(traceFrame != null && layerFrame == null){
     imageMode(CENTER);
     image(traceFrame, width / 2, height / 2);
     imageMode(CORNER);
+    drawBgFromData();
   }else{
     imageMode(CENTER);
     //traceFrame.mask(layerFrame);
@@ -174,6 +213,7 @@ void next(){
     tint(255, 160);
     image(layerFrame, width / 2, height / 2);
     imageMode(CORNER);
+    drawBgFromData();
   }
   points = new ArrayList<Object[]>();
 }
