@@ -178,12 +178,12 @@ void next(){
       image(layerFrame, width / 2, height / 2);
       imageMode(CORNER);
     }
+    drawBgFromData();
     for(Object[] pv: points){
       brushSize = (float)pv[2];
       PVector p = (PVector)pv[0];
       drawPoint(p, (color) pv[1], (int) pv[3], brushSize);
     }
-    drawBgFromData();
   }
   saveIncremental("frame", "png");
   saveFrame(savePath("lastFrame.png"));
