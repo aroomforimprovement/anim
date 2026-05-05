@@ -604,7 +604,8 @@ private void setTraceMode(){
 *  UP = start backward loop
 *  DOWN = render backward loop
 *  0 = black
-*  1 - 7 = size
+*  1 - 6 = size
+*  7 = size++
 *  x = wipe background
 *  s = single line
 *  m = mirrored line
@@ -612,8 +613,10 @@ private void setTraceMode(){
 *  i = india (mandala) line
 *  c = layer mode ON / OFF
 *  r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
+*  z = transparent, p = purple, u = brown, o = orange, h = grey
 *  n / ctrl = next
-*  o = open file
+*  a = setNewLayer
+*  ////!!!!o = open file
 *  [ / ] = lighter / darker
 */
 void keyPressed(){
