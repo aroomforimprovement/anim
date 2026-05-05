@@ -147,11 +147,11 @@ void saveBgData(){
 }
 
 void drawBgFromData(){
-  if(bgPoints != null && bgPoints.size > 0){
+  if(bgPoints != null && bgPoints.size() > 0){
      //use point list
-	 for(Object[] arr : bgPoints){
-		 drawPoint((PVector)arr[0], (color)arr[1], (int)arr[3], (float)arr[2]);
-	 }
+   for(Object[] arr : bgPoints){
+     drawPoint((PVector)arr[0], (color)arr[1], (int)arr[3], (float)arr[2]);
+   }
   }else{
     //try file
     File f = new File(sketchPath("bg.txt"));
@@ -169,12 +169,12 @@ void drawBgFromData(){
         color c = color(int(p[1]));
         float size = float(p[2]);
         int m = int(p[3]);
-		Object[] arr = new Object[4];
-		arr[0] = pv;
-		arr[1] = c;
-		arr[2] = size;
-		arr[3] = m;
-		bgPoints.add(arr);
+    Object[] arr = new Object[4];
+    arr[0] = pv;
+    arr[1] = c;
+    arr[2] = size;
+    arr[3] = m;
+    bgPoints.add(arr);
         drawPoint(pv, c, m, size);
     }
   }
