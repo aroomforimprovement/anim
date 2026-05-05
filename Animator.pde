@@ -147,26 +147,39 @@ void saveBgData(){
 }
 
 void drawBgFromData(){
-  File f = new File(sketchPath("bg.txt"));
-  if(f.exists()){
-    String[] lines = loadStrings("bg.txt");
-    for(String s : lines){
-      println("STRING HERE: " + s);
-      String[] p = s.split("\\|");
-      for(String thisString : p){println(thisString);}
-      p[0] = p[0].replace("[ ", "").replace(" ]", "");
-      String[] coS = p[0].split(",");
-      float[] coords = new float[2];
-      for(int i = 0; i < coS.length-1; i++){coords[i] = float(coS[i]);}
-      PVector pv = new PVector(coords[0], coords[1]);
-      color c = color(int(p[1]));
-      float size = float(p[2]);
-      println("MODE HERE: " + p[3]);
-      int m = int(p[3]);
-      println("MODE HERE: " + m);
-      drawPoint(pv, c, m, size);
+  if(bgPoints != null && bgPoints.size > 0){
+     //use point list
+	 for(Object[] arr : bgPoints){
+		 drawPoint((PVector)arr[0], (color)arr[1], (int)arr[3], (float)arr[2]);
+	 }
+  }else{
+    //try file
+    File f = new File(sketchPath("bg.txt"));
+    if(f.exists()){
+      bgPoints = new ArrayList<Object[]>();
+      String[] lines = loadStrings("bg.txt");
+      for(String s : lines){
+        String[] p = s.split("\\|");
+        for(String thisString : p){println(thisString);}
+        p[0] = p[0].replace("[ ", "").replace(" ]", "");
+        String[] coS = p[0].split(",");
+        float[] coords = new float[2];
+        for(int i = 0; i < coS.length-1; i++){coords[i] = float(coS[i]);}
+        PVector pv = new PVector(coords[0], coords[1]);
+        color c = color(int(p[1]));
+        float size = float(p[2]);
+        int m = int(p[3]);
+		Object[] arr = new Object[4];
+		arr[0] = pv;
+		arr[1] = c;
+		arr[2] = size;
+		arr[3] = m;
+		bgPoints.add(arr);
+        drawPoint(pv, c, m, size);
     }
   }
+  }
+  
 }
 
 void next(){
