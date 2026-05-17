@@ -147,26 +147,39 @@ void saveBgData(){
 }
 
 void drawBgFromData(){
-  File f = new File(sketchPath("bg.txt"));
-  if(f.exists()){
-    String[] lines = loadStrings("bg.txt");
-    for(String s : lines){
-      println("STRING HERE: " + s);
-      String[] p = s.split("\\|");
-      for(String thisString : p){println(thisString);}
-      p[0] = p[0].replace("[ ", "").replace(" ]", "");
-      String[] coS = p[0].split(",");
-      float[] coords = new float[2];
-      for(int i = 0; i < coS.length-1; i++){coords[i] = float(coS[i]);}
-      PVector pv = new PVector(coords[0], coords[1]);
-      color c = color(int(p[1]));
-      float size = float(p[2]);
-      println("MODE HERE: " + p[3]);
-      int m = int(p[3]);
-      println("MODE HERE: " + m);
-      drawPoint(pv, c, m, size);
+  if(bgPoints != null && bgPoints.size() > 0){
+     //use point list
+   for(Object[] arr : bgPoints){
+     drawPoint((PVector)arr[0], (color)arr[1], (int)arr[3], (float)arr[2]);
+   }
+  }else{
+    //try file
+    File f = new File(sketchPath("bg.txt"));
+    if(f.exists()){
+      bgPoints = new ArrayList<Object[]>();
+      String[] lines = loadStrings("bg.txt");
+      for(String s : lines){
+        String[] p = s.split("\\|");
+        for(String thisString : p){println(thisString);}
+        p[0] = p[0].replace("[ ", "").replace(" ]", "");
+        String[] coS = p[0].split(",");
+        float[] coords = new float[2];
+        for(int i = 0; i < coS.length-1; i++){coords[i] = float(coS[i]);}
+        PVector pv = new PVector(coords[0], coords[1]);
+        color c = color(int(p[1]));
+        float size = float(p[2]);
+        int m = int(p[3]);
+    Object[] arr = new Object[4];
+    arr[0] = pv;
+    arr[1] = c;
+    arr[2] = size;
+    arr[3] = m;
+    bgPoints.add(arr);
+        drawPoint(pv, c, m, size);
     }
   }
+  }
+  
 }
 
 void next(){
@@ -194,7 +207,11 @@ void next(){
       imageMode(CENTER);
       image(bg, width / 2, height / 2);
       imageMode(CORNER);
-    }
+    }else{
+      fill(bgColor, 200);
+      stroke(bgColor, 200);
+      rect(0, 0, width, height);
+  }
   }else if(layerFrame != null && traceFrame == null){
     imageMode(CENTER);
     image(layerFrame, width / 2, height / 2);
@@ -591,7 +608,8 @@ private void setTraceMode(){
 *  UP = start backward loop
 *  DOWN = render backward loop
 *  0 = black
-*  1 - 7 = size
+*  1 - 6 = size
+*  7 = size++
 *  x = wipe background
 *  s = single line
 *  m = mirrored line
@@ -599,8 +617,10 @@ private void setTraceMode(){
 *  i = india (mandala) line
 *  c = layer mode ON / OFF
 *  r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
+*  z = transparent, p = purple, u = brown, o = orange, h = grey
 *  n / ctrl = next
-*  o = open file
+*  a = setNewLayer
+*  ////!!!!o = open file
 *  [ / ] = lighter / darker
 */
 void keyPressed(){
@@ -667,10 +687,10 @@ void keyPressed(){
  }else if(key == 'a'){
    setNewLayer();
  }else if(key == 'r'){
-    pen = color(185, 70, 70, 200);
+    pen = color(185, 70, 70, 10);
     println("PEN = RED");
  }else if(key == 'b'){
-    pen = color(120, 210, 230, 200);
+    pen = color(120, 210, 230, 10);
     println("PEN = BLUE");
  }else if(key == 'g'){
    pen = color(30, 145, 30, 10);
@@ -686,13 +706,13 @@ void keyPressed(){
    println("PEN = YELLOW");
  }else if(key == 'p'){
    println("PEN = PURPLE");
-   pen = color(221, 211, 255, 20);
+   pen = color(221, 211, 255, 10);
  }else if(key == 'o'){
    println("PEN = ORANGE");
-   pen = color(255, 190, 107, 20);
+   pen = color(60, 47, 0, 10);
  }else if(key == 'h'){
    println("PEN = GREY");
-   pen = color(150, 200);
+   pen = color(150, 10);
  }else if(key == 'u'){
    println("PEN = BROWN");
    pen = color(223, 183, 60, 50);
