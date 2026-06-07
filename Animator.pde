@@ -40,6 +40,7 @@ boolean backwardLoopOn;
 int mode;
 boolean layerMode;
 boolean traceMode;
+boolean traceOverMode;
 float brushSize = 5;
 color pen = color(255);
 PImage image;
@@ -184,7 +185,9 @@ void drawBgFromData(){
 
 void next(){
   if(traceMode){
-    background(bgColor);
+    if(!traceOverMode){
+      background(bgColor);
+    }
     if(layerMode && layerFrame != null){
       tint(255, 255);
       imageMode(CENTER);
@@ -198,6 +201,7 @@ void next(){
       drawPoint(p, (color) pv[1], (int) pv[3], brushSize);
     }
   }
+  
   saveIncremental("frame", "png");
   saveFrame(savePath("lastFrame.png"));
   tint(255, 160);
@@ -211,17 +215,29 @@ void next(){
       fill(bgColor, 200);
       stroke(bgColor, 200);
       rect(0, 0, width, height);
-  }
+    }
   }else if(layerFrame != null && traceFrame == null){
     imageMode(CENTER);
     image(layerFrame, width / 2, height / 2);
     imageMode(CORNER);
     drawBgFromData();
   }else if(traceFrame != null && layerFrame == null){
+    if(traceOverMode){
+      tint(255);
+      background(bgColor);
+      tint(255, 160);
+      for(Object[] pv: points){
+        brushSize = (float)pv[2];
+        PVector p = (PVector)pv[0];
+        drawPoint(p, (color) pv[1], (int) pv[3], brushSize);
+      }
+      //tint(255);
+    }
     imageMode(CENTER);
     image(traceFrame, width / 2, height / 2);
     imageMode(CORNER);
     drawBgFromData();
+    
   }else{
     imageMode(CENTER);
     //traceFrame.mask(layerFrame);
@@ -593,6 +609,9 @@ private void setTraceMode(){
       imageMode(CENTER);
       image(traceFrame, width / 2, height / 2);
       imageMode(CORNER);
+      stroke(bgColor, 100);
+      fill(bgColor, 100);
+      rect(0, 0, width, height);
     }else{
       traceFrame = null;
     }
@@ -616,8 +635,10 @@ private void setTraceMode(){
 *  l = lake (horizontal mirror) line
 *  i = india (mandala) line
 *  c = layer mode ON / OFF
+*  t = trace mode ON / OFF
+*  q = trace over mode ON / OFF
 *  r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
-*  z = transparent, p = purple, u = brown, o = orange, h = grey
+*  z = transparent, p = purple, u = brown, o = orange, h = grey, u = brown
 *  n / ctrl = next
 *  a = setNewLayer
 *  ////!!!!o = open file
@@ -684,6 +705,8 @@ void keyPressed(){
    setLayerMode();
  }else if(key == 't'){
    setTraceMode();
+ }else if(key == 'q'){
+   traceOverMode = !traceOverMode;
  }else if(key == 'a'){
    setNewLayer();
  }else if(key == 'r'){
