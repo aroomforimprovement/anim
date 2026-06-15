@@ -397,43 +397,8 @@ void renderForwardLoop(){
   println("renderForwardLoop");
   forwardLoopOn = false;
   println("Forward loop OFF");
-  if(forwardLoop == null || forwardLoop.size() < 1){
-    println("nothing in forwardLoop");
-    return;
-  }
-  ArrayList<String> newLoop = new ArrayList<String>();
-  String lastFilename = forwardLoop.get(forwardLoop.size() - 1).substring(5, 9);
-  int lastN = parseInt(lastFilename);
-  String firstFilename = forwardLoop.get(0).substring(5, 9);
-  int firstN = parseInt(firstFilename);
-  int diff = lastN - firstN;
-  println("FIRST FRAME: " + firstFilename);
-  println("LAST FRAME: " + lastFilename);
-  println("DIFF: " + diff);
-  for(String s : forwardLoop){
-    println("loop file name: " + s);
-    String oldFilename = s;
-    String n = oldFilename.substring(5, 9);
-    int fileNumber = parseInt(n);
-    fileNumber += diff + 1;
-    String newFilename = "frame";
-    newFilename += getFileNumberPrefix(fileNumber);
-    newFilename += fileNumber;
-    println("FILE NUMBER: " + fileNumber);
-    newFilename += ".png";
-    println("NEW FILE NAME: " + newFilename);
-    
-    copyFrame(new File(savePath(s)), new File(savePath(newFilename)));
-    newLoop.add(newFilename);
-  }
-  forwardLoop = newLoop;
-  tint(255, 255);
-  imageMode(CENTER);
-  image(loadImage(forwardLoop.get(forwardLoop.size() -1 )), width / 2, height / 2);
-  imageMode(CORNER);
-  println("finished renderForwardLoop");
+  renderLoop(forwardLoop);
 }
-
 
 void startBackwardLoop(){
   println("startBackwardLoop");
@@ -445,21 +410,26 @@ void startBackwardLoop(){
 void renderBackwardLoop(){
   println("renderBackwardLoop");
   backwardLoopOn = false;
-  println("Forward loop OFF");
-  if(backwardLoop == null || backwardLoop.size() < 1){
+  println("Backward loop OFF");
+  renderLoop(backwardLoop);
+}
+
+
+void renderLoop(ArrayList<String>() loop){
+	if(loop == null || loop.size() < 1){
     println("nothing in forwardLoop");
     return;
   }
   ArrayList<String> newLoop = new ArrayList<String>();
-  String lastFilename = backwardLoop.get(backwardLoop.size() - 1).substring(5, 9);
+  String lastFilename = loop.get(loop.size() - 1).substring(5, 9);
   int lastN = parseInt(lastFilename);
-  String firstFilename = backwardLoop.get(0).substring(5, 9);
+  String firstFilename = loop.get(0).substring(5, 9);
   int firstN = parseInt(firstFilename);
   int diff = lastN - firstN;
   println("FIRST FRAME: " + firstFilename);
   println("LAST FRAME: " + lastFilename);
   println("DIFF: " + diff);
-  for(String s : backwardLoop){
+  for(String s : loop){
     println("loop file name: " + s);
     String oldFilename = s;
     String n = oldFilename.substring(5, 9);
@@ -475,12 +445,12 @@ void renderBackwardLoop(){
     copyFrame(new File(savePath(s)), new File(savePath(newFilename)));
     newLoop.add(newFilename);
   }
-  backwardLoop = newLoop;
+  loop = new ArrayList<String>(newLoop);
   tint(255, 255);
   imageMode(CENTER);
   image(loadImage(backwardLoop.get(backwardLoop.size() -1 )), 0, 0);
   imageMode(CORNER);
-  println("finished renderBackwardLoop");
+  println("finished renderLoop");
 }
 
 void fileSelected(File file){
