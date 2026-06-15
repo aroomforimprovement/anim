@@ -121,23 +121,22 @@ void drawStroke(Stroke s){
 void drawPoint(PVector p, color pen, int mode, float brushSize){
   stroke(pen);
   fill(pen);
+  float d = brushSize / 3;
+  ellipse(px, py, d, d);
   switch(mode){
     case SINGLE:
-    ellipse(p.x, p.y, brushSize/3, brushSize/3);
+    //ellipse(p.x, p.y, d, d);
     break;
     case MIRROR:
-    ellipse(p.x, p.y, brushSize/3, brushSize/3);
-    ellipse(width - p.x, p.y, brushSize/3, brushSize/3);
+    ellipse(width - p.x, p.y, d, d);
     break;
   case LAKE:
-    ellipse(p.x, p.y, brushSize/3, brushSize/3);
-    ellipse(p.x, height - p.y, brushSize/3, brushSize/3);
+    ellipse(p.x, height - p.y, d, d);
     break;
   case INDIA:
-    ellipse(p.x, p.y, brushSize/3, brushSize/3);
-    ellipse(p.x, height - p.y, brushSize/3, brushSize/3);
-    ellipse(width - p.x, height - p.y, brushSize/3, brushSize/3);
-    ellipse(width - p.x, p.y, brushSize/3, brushSize/3);
+    ellipse(p.x, height - p.y, d, d);
+    ellipse(width - p.x, height - p.y, d, d);
+    ellipse(width - p.x, p.y, d, d);
     break;
     default:
     println("ERROR - DEFAULT MODE: " + mode + " @drawPoint()");
