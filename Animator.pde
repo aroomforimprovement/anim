@@ -87,9 +87,7 @@ void createFrames(){
   if(f.exists()){
     tint(255, 255);
     PImage p = loadImage(savePath("lastFrame.png"));
-    imageMode(CENTER);
-    image(p, width / 2, height /2);
-    imageMode(CORNER);
+	drawImageCentered(p);
   }else{
     background(bgColor);
   }
@@ -194,6 +192,12 @@ void drawBgFromData(){
   }
 }
 
+void drawImageCentered(PImage img){
+	imageMode(CENTER);
+	image(img, width / 2, height / 2);
+	imageMode(CORNER);
+}
+
 void next(){
   if(traceMode){
     if(!traceOverMode){
@@ -201,9 +205,7 @@ void next(){
     }
     if(layerMode && layerFrame != null){
       tint(255, 255);
-      imageMode(CENTER);
-      image(layerFrame, width / 2, height / 2);
-      imageMode(CORNER);
+	  drawImageCentered(layerFrame);
     }
     drawBgFromData();
     for(Stroke pv: points){
@@ -217,18 +219,14 @@ void next(){
   if(layerFrame == null && traceFrame == null){
     bg = loadImage("bg.png");
     if(bg != null){
-      imageMode(CENTER);
-      image(bg, width / 2, height / 2);
-      imageMode(CORNER);
+	  drawImageCentered(bg);
     }else{
       fill(bgColor, 200);
       stroke(bgColor, 200);
       rect(0, 0, width, height);
     }
   }else if(layerFrame != null && traceFrame == null){
-    imageMode(CENTER);
-    image(layerFrame, width / 2, height / 2);
-    imageMode(CORNER);
+	drawImageCentered(layerFrame);
     drawBgFromData();
   }else if(traceFrame != null && layerFrame == null){
     if(traceOverMode){
@@ -240,11 +238,8 @@ void next(){
       }
       //tint(255);
     }
-    imageMode(CENTER);
-    image(traceFrame, width / 2, height / 2);
-    imageMode(CORNER);
-    drawBgFromData();
-    
+	drawImageCentered(traceFrame);
+    drawBgFromData();    
   }else{
     imageMode(CENTER);
     //traceFrame.mask(layerFrame);
@@ -384,9 +379,7 @@ void setLastFrame(String prefix, String extension){
    if(f.exists()){
      println("Opening "+filename);
      img = loadImage(f.getName());
-     imageMode(CENTER);
-     image(img, width / 2, height / 2);
-     imageMode(CORNER);
+	 drawImageCentered(img);
    }
 }
 
@@ -460,9 +453,7 @@ void renderLoop(ArrayList<String>() loop){
 void fileSelected(File file){
   img = loadImage(file.getName());
   println(file.getName());
-  imageMode(CENTER);
-  image(img, width / 2, height / 2);
-  imageMode(CORNER);
+  drawImageCentered(img);
 }
 
 
@@ -507,14 +498,10 @@ private void setLayerMode(){
   if(layerMode){
      layerMode = false;
      if(!traceMode && bg != null){
-       imageMode(CENTER);
-       image(bg, width / 2, height / 2);
-       imageMode(CORNER);
+	   drawImageCentered(bg);
      }else if(traceMode && traceFrame != null){
        tint(255, 160);
-       imageMode(CENTER);
-       image(traceFrame, width / 2, height / 2);
-       imageMode(CORNER);
+	   drawImageCentered(traceFrame);
      }else{
        background(bgColor);
      }
@@ -538,9 +525,7 @@ private void setLayerMode(){
          tint(255, 160);
        }
        layerFrame = loadImage(layer.getPath());
-       imageMode(CENTER);
-       image(layerFrame, width / 2, height / 2);
-       imageMode(CORNER);
+	   drawImageCentered(layerFrame);
      }else{
        layerFrame = null;
      }
@@ -552,14 +537,10 @@ private void setTraceMode(){
   if(traceMode){
     traceMode = false;
     if(!layerMode && bg != null){
-      imageMode(CENTER);
-      image(bg, width / 2, height / 2);
-      imageMode(CORNER);
+	  drawImageCentered(bg);
     }else if(layerMode && layerFrame != null){
       tint(255, 160);
-      imageMode(CENTER);
-      image(layerFrame, width / 2, height / 2);
-      imageMode(CORNER);
+	  drawImageCentered(layerFrame);
     }else{
       background(bgColor);
     }
@@ -583,9 +564,7 @@ private void setTraceMode(){
         tint(255, 160);
       }
       traceFrame = loadImage(trace.getPath());
-      imageMode(CENTER);
-      image(traceFrame, width / 2, height / 2);
-      imageMode(CORNER);
+	  drawImageCentered(traceFrame);
       stroke(bgColor, 100);
       fill(bgColor, 100);
       rect(0, 0, width, height);
