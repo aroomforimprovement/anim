@@ -132,7 +132,10 @@ void drawPoint(PVector p, color pen, int mode, float brushSize){
 
 void setBg(){
   
-  bgPoints = points;
+  bgPoints = new ArrayList<Object[]>();
+  for(Object[] arr : points){
+    bgPoints.add(arr.clone());
+  }
   saveBgData();
   saveFrame(savePath("bg.png"));
   bg = loadImage("bg.png");
