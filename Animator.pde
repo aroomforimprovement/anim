@@ -36,6 +36,32 @@ class Stroke {
 		this.size = size;
 		this.mode = mode;
 	}
+
+	Stroke(Stroke other){
+		this.pos = other.pos.copy();
+		this.pen = other.pen;
+		this.size = other.size;
+		this.mode = other.mode;
+	}
+
+	String serialise() {
+    	return pos.x + "," + pos.y + "|" + (int)pen + "|" + size + "|" + mode;
+  	}
+
+  	static Stroke fromString(String line) {
+    	String[] parts = split(line, '|');
+    	String[] coordParts = split(parts[0], ',');
+
+	    float x = float(trim(coordParts[0]));
+    	float y = float(trim(coordParts[1]));
+    	PVector pos = new PVector(x, y);
+
+    	color c = color(int(parts[1]));
+    	float size = float(parts[2]);
+    	int mode = int(parts[3]);
+
+    	return new Stroke(pos, c, size, mode);
+  	}
 }
 
 public static final int SINGLE = 101;
@@ -57,8 +83,7 @@ boolean traceMode;
 boolean traceOverMode;
 float brushSize = 5;
 color pen = color(255);
-PImage image;
-PImage bg;
+Image bg;
 PImage img;
 PImage layerFrame;
 PImage traceFrame;
@@ -103,10 +128,7 @@ void createFrames(){
 }
 
 void createFrame(Stroke pv, int i){
-  brushSize = pv.size;
-  PVector p = pv.pos;
-  mode = pv.mode;
-  drawStroke(pv)
+  drawStroke(pv);
   if(i%20 == 0){
     saveIncremental("frame", "png");
   }
@@ -120,10 +142,10 @@ void drawPoint(PVector p, color pen, int mode, float brushSize){
   stroke(pen);
   fill(pen);
   float d = brushSize / 3;
-  ellipse(px, py, d, d);
+  ellipse(p.x, p.y, d, d);
   switch(mode){
     case SINGLE:
-    //ellipse(p.x, p.y, d, d);
+    //stroke drawn outside switch
     break;
     case MIRROR:
     ellipse(width - p.x, p.y, d, d);
@@ -145,7 +167,7 @@ void setBg(){
   
   bgPoints = new ArrayList<Stroke>();
   for(Stroke stroke : points){
-    bgPoints.add(stroke.clone());
+    bgPoints.add(new Stroke(stroke));
   }
   saveBgData();
   saveFrame(savePath("bg.png"));
@@ -154,39 +176,27 @@ void setBg(){
 
 void saveBgData(){
   PrintWriter output = createWriter("bg.txt");
-  for(Stroe pv: bgPoints){
-    output.println(stroke.pos + "|" + stroke.pen + "|" + stroke.size + "|" + stroke.mode);
+  for(Stroke stroke: bgPoints){
+    output.println(stroke.serialise());
   }
   output.flush();
   output.close();
 }
 
 void drawBgFromData(){
-  if(bgPoints != null && bgPoints.size() > 0){
-     //use point list
-   for(Stroke stroke : bgPoints){
-	 drawStroke(stroke);
-   }
-  }else{
-    //try file
+  if (bgPoints != null && bgPoints.size() > 0) {
+    for (Stroke stroke : bgPoints) {
+      drawStroke(stroke);
+    }
+  } else {
     File f = new File(sketchPath("bg.txt"));
-    if(f.exists()){
+    if (f.exists()) {
       bgPoints = new ArrayList<Stroke>();
       String[] lines = loadStrings("bg.txt");
-      for(String s : lines){
-        String[] p = s.split("\\|");
-        for(String thisString : p){println(thisString);}
-        p[0] = p[0].replace("[ ", "").replace(" ]", "");
-        String[] coS = p[0].split(",");
-        float[] coords = new float[2];
-        for(int i = 0; i < coS.length-1; i++){coords[i] = float(coS[i]);}
-        PVector pv = new PVector(coords[0], coords[1]);
-        color c = color(int(p[1]));
-        float size = float(p[2]);
-        int m = int(p[3]);
-    	Stroke strk = new Stroke(pv, c, size, m);
-    	bgPoints.add(strk);
-		drawStroke(strk);        
+      for (String s : lines) {
+        Stroke strk = Stroke.fromString(s);
+        bgPoints.add(strk);
+        drawStroke(strk);
       }
     }
   }
@@ -253,86 +263,77 @@ void next(){
   points = new ArrayList<Stroke>();
 }
 
-void saveIncremental(String prefix,String extension) {
+String frameName(int index, String prefix, String extension) {
+  return prefix + nf(index, 4) + "." + extension;
+}
+
+void saveIncremental(String prefix, String extension) {
   int savecnt = 1;
-  boolean ok=false;
-  String filename="";
+  String filename;
   File f;
-  while(!ok) {
-    filename = prefix;  
-    filename += getFileNumberPrefix(savecnt);
-    filename += savecnt + "." +extension;
-    f=new File(savePath(filename));
-    if(!f.exists()) ok=true; // File doesn't exist
+
+  // find first free index
+  while (true) {
+    filename = frameName(savecnt, prefix, extension);
+    f = new File(savePath(filename));
+    if (!f.exists()) break;
     savecnt++;
   }
-  
-  int traceCnt = savecnt;
-  if(savecnt == 1){traceCnt=2;}
-  if(traceMode){
-    String traceName = prefix + getFileNumberPrefix(traceCnt) + traceCnt + "." + extension; 
+
+  // trace / layer lookups can use same helper with appropriate index
+  int traceCnt = max(2, savecnt);  // your existing logic
+
+  if (traceMode) {
+    String traceName = frameName(traceCnt, prefix, extension);
     File trace = new File(sketchPath() + "/trace/" + traceName);
-    if(trace.exists()){
-      traceFrame = loadImage(trace.getPath());
-    }else{
-      traceFrame = null;
-    }
+    traceFrame = trace.exists() ? loadImage(trace.getPath()) : null;
   }
-  if(layerMode){
-    String layerName = prefix + getFileNumberPrefix(traceCnt) + traceCnt + "." + extension; 
-      File layer = new File(sketchPath() + "/layer/" + layerName);
-      if(layer.exists()){
-        layerFrame = loadImage(layer.getPath());
-      }else{
-        layerFrame = null;
-      }
-    }
-  println("Saving "+filename);
+
+  if (layerMode) {
+    String layerName = frameName(traceCnt, prefix, extension);
+    File layer = new File(sketchPath() + "/layer/" + layerName);
+    layerFrame = layer.exists() ? loadImage(layer.getPath()) : null;
+  }
+
+  println("Saving " + filename);
   saveFrame(savePath(filename));
-  
-  if(forwardLoopOn){
-    forwardLoop.add(filename);
-  }
-  if(backwardLoopOn){
-    backwardLoop.add(filename);
-  }
-  
+
+  if (forwardLoopOn) forwardLoop.add(filename);
+  if (backwardLoopOn) backwardLoop.add(filename);
 }
+
 
 void setNewLayer(){
   println("setNewLayer");
-  String foldername = "layer";
-  File layerZero = new File(sketchPath() + "/"+ foldername + "/");
-  if(layerZero.exists()){
-    println("layerZero exists");
+  String baseName = "layer";
+  File layerZero = new File(sketchPath() + "/" + baseName + "/");
+  if (layerZero.exists()) {
     int savecnt = 1;
-    boolean ok = false;
-    while(!ok){
-      foldername += getFileNumberPrefix(savecnt);
-      foldername += savecnt;
-      println("foldername: " + foldername);
-      File fo = new File(sketchPath() + "/"+ foldername + "/");
-      if(!fo.exists()){
-        ok = true;
-        foldername = "layer" + getFileNumberPrefix(savecnt) + savecnt;
-        layerZero.renameTo(new File(sketchPath() + "/" + foldername + "/"));
+    while (true) {
+      String candidate = baseName + nf(savecnt, 4);
+      println("foldername: " + candidate);
+      File fo = new File(sketchPath() + "/" + candidate + "/");
+      if (!fo.exists()) {
+        // rename the existing 'layer' folder
+        layerZero.renameTo(fo);
+        break;
       }
       savecnt++;
-      
     }
-    
   }
+
+  // create a fresh 'layer' folder
   File newLayerFolder = new File(sketchPath() + "/layer/");
-    newLayerFolder.mkdir();
-    File path = new File(sketchPath());
-    File[] files = path.listFiles();
-    for(int i = 0; i < files.length; i++){
-      println(i);
-      if(files[i].getName().indexOf("png") > 0){
-        println("png found");
-        files[i].renameTo(new File(newLayerFolder.getPath() + "/" + files[i].getName()));
-      }
+  newLayerFolder.mkdir();
+
+  // move existing pngs into new layer folder
+  File path = new File(sketchPath());
+  File[] files = path.listFiles();
+  for (int i = 0; i < files.length; i++) {
+    if (files[i].getName().endsWith(".png")) {
+      files[i].renameTo(new File(newLayerFolder.getPath() + "/" + files[i].getName()));
     }
+  }
 }
 
 
@@ -415,7 +416,7 @@ void renderBackwardLoop(){
 ArrayList<String> renderLoop(ArrayList<String> loop){
 	if(loop == null || loop.size() < 1){
     println("nothing in forwardLoop");
-    return;
+    return loop;
   }
   ArrayList<String> newLoop = new ArrayList<String>();
   String lastFilename = loop.get(loop.size() - 1).substring(5, 9);
@@ -443,16 +444,17 @@ ArrayList<String> renderLoop(ArrayList<String> loop){
     newLoop.add(newFilename);
   }
   tint(255, 255);
-  imageMode(CENTER);
-  image(loadImage(loop.get(backwardLoop.size() -1 )), 0, 0);
-  imageMode(CORNER);
+  drawImageCentered(loop.get(loop.size() -1));
   println("finished renderLoop");
   return newLoop;
 }
 
 void fileSelected(File file){
-  img = loadImage(file.getName());
-  println(file.getName());
+  if(file == null){
+	return;
+  }
+  img = loadImage(file.getAbsolutePath());
+  println(file.getAbsolutePath());
   drawImageCentered(img);
 }
 
@@ -574,7 +576,7 @@ private void setTraceMode(){
   }
 }
 
-void incrementColour(key){
+void incrementColour(char key){
   float r = red(pen);
   float g = green(pen);
   float b = blue(pen);
