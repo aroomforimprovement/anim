@@ -433,18 +433,17 @@ ArrayList<String> renderLoop(ArrayList<String> loop){
     String n = oldFilename.substring(5, 9);
     int fileNumber = parseInt(n);
     fileNumber += diff + 1;
-    String newFilename = "frame";
-    newFilename += getFileNumberPrefix(fileNumber);
-    newFilename += fileNumber;
-    println("FILE NUMBER: " + fileNumber);
-    newFilename += ".png";
+	String newFilename = frameName(fileNumber, "frame", "png");    
     println("NEW FILE NAME: " + newFilename);
     
     copyFrame(new File(savePath(s)), new File(savePath(newFilename)));
     newLoop.add(newFilename);
   }
   tint(255, 255);
-  drawImageCentered(loop.get(loop.size() -1));
+  PImage last = loadImage(savePath(loop.get(loop.size() -1)));
+  if(last != null){
+	drawImageCentered(last);
+  }
   println("finished renderLoop");
   return newLoop;
 }
@@ -456,18 +455,6 @@ void fileSelected(File file){
   img = loadImage(file.getAbsolutePath());
   println(file.getAbsolutePath());
   drawImageCentered(img);
-}
-
-
-String getFileNumberPrefix(int fileNumber){
-  if(fileNumber < 10){
-      return "000";
-    }else if(fileNumber < 100){
-      return "00";
-    }else if(fileNumber < 1000){
-      return "0";
-    }
-    return "";
 }
 
 private static void copyFrame(File orig, File next){
@@ -514,9 +501,7 @@ private void setLayerMode(){
      String filename = "";
      File f;
      while(!ok){
-       filename = "frame";
-       filename += getFileNumberPrefix(savecnt);
-       filename += savecnt + ".png";
+	   filename = frameName(savecnt, "frame", "png");
        f = new File(savePath(filename));
        if(!f.exists()) ok = true;
        savecnt++;
@@ -553,9 +538,7 @@ private void setTraceMode(){
     String filename = "";
     File f;
     while(!ok){
-      filename = "frame";
-      filename += getFileNumberPrefix(savecnt);
-      filename += savecnt + ".png";
+	  filename = frameName(savecnt, "frame", "png");
       f = new File(savePath(filename));
       if(!f.exists()) ok = true;
       savecnt++;
