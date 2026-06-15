@@ -40,6 +40,7 @@ boolean backwardLoopOn;
 int mode;
 boolean layerMode;
 boolean traceMode;
+boolean traceOverMode;
 float brushSize = 5;
 color pen = color(255);
 PImage image;
@@ -184,7 +185,9 @@ void drawBgFromData(){
 
 void next(){
   if(traceMode){
-    background(bgColor);
+    if(!traceOverMode){
+      background(bgColor);
+    }
     if(layerMode && layerFrame != null){
       tint(255, 255);
       imageMode(CENTER);
@@ -198,6 +201,7 @@ void next(){
       drawPoint(p, (color) pv[1], (int) pv[3], brushSize);
     }
   }
+  
   saveIncremental("frame", "png");
   saveFrame(savePath("lastFrame.png"));
   tint(255, 160);
@@ -207,6 +211,10 @@ void next(){
       imageMode(CENTER);
       image(bg, width / 2, height / 2);
       imageMode(CORNER);
+    }else{
+      fill(bgColor, 200);
+      stroke(bgColor, 200);
+      rect(0, 0, width, height);
     }
   }else if(layerFrame != null && traceFrame == null){
     imageMode(CENTER);
@@ -214,10 +222,22 @@ void next(){
     imageMode(CORNER);
     drawBgFromData();
   }else if(traceFrame != null && layerFrame == null){
+    if(traceOverMode){
+      tint(255);
+      background(bgColor);
+      tint(255, 160);
+      for(Object[] pv: points){
+        brushSize = (float)pv[2];
+        PVector p = (PVector)pv[0];
+        drawPoint(p, (color) pv[1], (int) pv[3], brushSize);
+      }
+      //tint(255);
+    }
     imageMode(CENTER);
     image(traceFrame, width / 2, height / 2);
     imageMode(CORNER);
     drawBgFromData();
+    
   }else{
     imageMode(CENTER);
     //traceFrame.mask(layerFrame);
@@ -589,6 +609,9 @@ private void setTraceMode(){
       imageMode(CENTER);
       image(traceFrame, width / 2, height / 2);
       imageMode(CORNER);
+      stroke(bgColor, 100);
+      fill(bgColor, 100);
+      rect(0, 0, width, height);
     }else{
       traceFrame = null;
     }
@@ -612,8 +635,11 @@ private void setTraceMode(){
 *  l = lake (horizontal mirror) line
 *  i = india (mandala) line
 *  c = layer mode ON / OFF
+*  t = trace mode ON / OFF
+*  q = trace over mode ON / OFF
 *  r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
 *  z = transparent, p = purple, u = brown, o = orange, h = grey
+*  z = transparent, p = purple, u = brown, o = orange, h = grey, u = brown
 *  n / ctrl = next
 *  a = setNewLayer
 *  ////!!!!o = open file
@@ -680,13 +706,15 @@ void keyPressed(){
    setLayerMode();
  }else if(key == 't'){
    setTraceMode();
+ }else if(key == 'q'){
+   traceOverMode = !traceOverMode;
  }else if(key == 'a'){
    setNewLayer();
  }else if(key == 'r'){
-    pen = color(185, 70, 70, 200);
+    pen = color(185, 70, 70, 10);
     println("PEN = RED");
  }else if(key == 'b'){
-    pen = color(120, 210, 230, 200);
+    pen = color(120, 210, 230, 10);
     println("PEN = BLUE");
  }else if(key == 'g'){
    pen = color(30, 145, 30, 10);
@@ -702,13 +730,13 @@ void keyPressed(){
    println("PEN = YELLOW");
  }else if(key == 'p'){
    println("PEN = PURPLE");
-   pen = color(221, 211, 255, 20);
+   pen = color(221, 211, 255, 10);
  }else if(key == 'o'){
    println("PEN = ORANGE");
-   pen = color(255, 190, 107, 20);
+   pen = color(60, 47, 0, 10);
  }else if(key == 'h'){
    println("PEN = GREY");
-   pen = color(150, 200);
+   pen = color(150, 10);
  }else if(key == 'u'){
    println("PEN = BROWN");
    pen = color(223, 183, 60, 50);
