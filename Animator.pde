@@ -267,21 +267,23 @@ String frameName(int index, String prefix, String extension) {
   return prefix + nf(index, 4) + "." + extension;
 }
 
+int findNextFreeFrameIndex(String prefix, String extension){
+	int i = 1;
+	while(true){
+		String filename = frameName(i, prefix, extension);
+		File f = new File(savePath(filename));
+		if(!f.exists()){
+			return i;
+		}
+		i++;
+	}
+}
+
 void saveIncremental(String prefix, String extension) {
-  int savecnt = 1;
-  String filename;
-  File f;
-
-  // find first free index
-  while (true) {
-    filename = frameName(savecnt, prefix, extension);
-    f = new File(savePath(filename));
-    if (!f.exists()) break;
-    savecnt++;
-  }
-
-  // trace / layer lookups can use same helper with appropriate index
-  int traceCnt = max(2, savecnt);  // your existing logic
+  int savecnt = findNextFreeFrameIndex(prefix, extension);
+  String filename = frameName(savecnt, prefix, extension);
+  
+  int traceCnt = max(2, savecnt);  
 
   if (traceMode) {
     String traceName = frameName(traceCnt, prefix, extension);
@@ -337,51 +339,25 @@ void setNewLayer(){
 }
 
 
-void setLastFrame(String prefix, String extension){
-  int savecnt = 1; 
-  boolean ok = false;
-  String filename = "";
-   File f = null;
-   while(!ok){
-     filename = prefix;
-     if(savecnt < 10){
-       filename+="000";
-     }else if(savecnt < 100){
-       filename += "00";
-     }else if(savecnt < 1000){
-       filename += "0";
-     }
-     
-     filename+=""+savecnt+"."+extension;
-     f = new File(savePath(filename));
-     
-     if(f.exists()){
-       savecnt++;
-     }else if(savecnt < 1 && !f.exists()){
-       ok = true;
-     }else{
-       if(savecnt > 0){
-         println("Trying to Open "+filename);
-         ok = true;
-       }
-     }
-   }
-   savecnt--;
-   if(savecnt < 10){
-       prefix+="000";
-     }else if(savecnt < 100){
-       prefix += "00";
-     }else if(savecnt < 1000){
-       prefix += "0"; 
-     }
-   f = new File(savePath(prefix+savecnt+"."+extension));
-   
-   println(f.getName());
-   if(f.exists()){
-     println("Opening "+filename);
-     img = loadImage(f.getName());
-	 drawImageCentered(img);
-   }
+void setLastFrame(String prefix, String extension) {
+  int nextIndex = findNextFreeFrameIndex(prefix, extension);
+  int lastIndex = nextIndex - 1;
+
+  if (lastIndex < 1) {
+    println("No previous frame found.");
+    return;
+  }
+
+  String filename = frameName(lastIndex, prefix, extension);
+  File f = new File(savePath(filename));
+
+  println(f.getName());
+  if (f.exists()) {
+    println("Opening " + filename);
+    // use the name so it loads from the sketch folder
+    img = loadImage(f.getName());
+    drawImageCentered(img);
+  }
 }
 
 void startForwardLoop(){
@@ -482,78 +458,77 @@ private static void copyFrame(File orig, File next){
   }
 }
 
-private void setLayerMode(){
+private void setLayerMode() {
   println("setLayerMode");
-  if(layerMode){
-     layerMode = false;
-     if(!traceMode && bg != null){
-	   drawImageCentered(bg);
-     }else if(traceMode && traceFrame != null){
-       tint(255, 160);
-	   drawImageCentered(traceFrame);
-     }else{
-       background(bgColor);
-     }
-  }else{
-     layerMode = true;
-     boolean ok = false;
-     int savecnt = 1;
-     String filename = "";
-     File f;
-     while(!ok){
-	   filename = frameName(savecnt, "frame", "png");
-       f = new File(savePath(filename));
-       if(!f.exists()) ok = true;
-       savecnt++;
-     }
-     File layer = new File(sketchPath() + "/layer/" + filename);
-     if(layer.exists()){
-       if(traceMode){
-         tint(255, 160);
-       }
-       layerFrame = loadImage(layer.getPath());
-	   drawImageCentered(layerFrame);
-     }else{
-       layerFrame = null;
-     }
+
+  if (layerMode) {
+    // turning OFF
+    layerMode = false;
+
+    if (!traceMode && bg != null) {
+      drawImageCentered(bg);
+    } else if (traceMode && traceFrame != null) {
+      tint(255, 160);
+      drawImageCentered(traceFrame);
+    } else {
+      background(bgColor);
+    }
+
+  } else {
+    // turning ON
+    layerMode = true;
+
+    int nextIndex = findNextFreeFrameIndex("frame", "png");
+    String filename = frameName(nextIndex, "frame", "png");
+
+    File layer = new File(sketchPath() + "/layer/" + filename);
+    if (layer.exists()) {
+      if (traceMode) {
+        tint(255, 160);
+      }
+      layerFrame = loadImage(layer.getPath());
+      drawImageCentered(layerFrame);
+    } else {
+      layerFrame = null;
+    }
   }
 }
 
-private void setTraceMode(){
+private void setTraceMode() {
   println("setTraceMode");
-  if(traceMode){
+
+  if (traceMode) {
+    // turning OFF
     traceMode = false;
-    if(!layerMode && bg != null){
-	  drawImageCentered(bg);
-    }else if(layerMode && layerFrame != null){
+
+    if (!layerMode && bg != null) {
+      drawImageCentered(bg);
+    } else if (layerMode && layerFrame != null) {
       tint(255, 160);
-	  drawImageCentered(layerFrame);
-    }else{
+      drawImageCentered(layerFrame);
+    } else {
       background(bgColor);
     }
-  }else{
+
+  } else {
+    // turning ON
     traceMode = true;
-    boolean ok = false;
-    int savecnt = 1;
-    String filename = "";
-    File f;
-    while(!ok){
-	  filename = frameName(savecnt, "frame", "png");
-      f = new File(savePath(filename));
-      if(!f.exists()) ok = true;
-      savecnt++;
-    }
+
+    int nextIndex = findNextFreeFrameIndex("frame", "png");
+    String filename = frameName(nextIndex, "frame", "png");
+
     File trace = new File(sketchPath() + "/trace/" + filename);
-    if(trace.exists()){
-      if(layerMode){
+    if (trace.exists()) {
+      if (layerMode) {
         tint(255, 160);
       }
       traceFrame = loadImage(trace.getPath());
-	  drawImageCentered(traceFrame);
+      drawImageCentered(traceFrame);
+
       stroke(bgColor, 100);
       fill(bgColor, 100);
       rect(0, 0, width, height);
-    }else{
+    } else {
       traceFrame = null;
     }
   }
