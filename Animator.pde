@@ -24,6 +24,20 @@
 *  a = New Layer
 */
 
+class Stroke {
+	PVector pos;
+	color pen;
+	float size;
+	int mode;
+
+	Stroke(PVector pos, color pen, float size, int mode){
+		this.pos = pos;
+		this.pen = pen;
+		this.size = size;
+		this.mode = mode;
+	}
+}
+
 public static final int SINGLE = 101;
 public static final int MIRROR = 102;
 public static final int LAKE = 103;
@@ -31,8 +45,8 @@ public static final int INDIA = 104;
 
 int bgColor = 0;
 
-ArrayList<Object[]> points = new ArrayList<Object[]>();
-ArrayList<Object[]> bgPoints = new ArrayList<Object[]>();
+ArrayList<Stroke> points = new ArrayList<Stroke>();
+ArrayList<Stroke> bgPoints = new ArrayList<Stroke>();
 ArrayList<String> forwardLoop;
 ArrayList<String> backwardLoop;
 boolean forwardLoopOn;
@@ -63,13 +77,9 @@ void draw(){
 
 void mouseDragged(){
   PVector p = new PVector(mouseX, mouseY);
-  Object[] arr = new Object[4];
-  arr[0] = p;
-  arr[1] = pen;
-  arr[2] = brushSize;
-  arr[3] = mode;
-  points.add(arr);
-  drawPoint(p, pen, mode, brushSize);
+  Stroke stroke = new Stroke(p, pen, brushSize, mode);
+  points.add(stroke);
+  drawStroke(stroke);
 }
 
 void createFrames(){
@@ -94,14 +104,18 @@ void createFrames(){
   
 }
 
-void createFrame(Object[] pv, int i){
-  brushSize = (float)pv[2];
-  PVector p = (PVector)pv[0];
-  mode = (int) pv[3];
-  drawPoint(p, (color) pv[1], mode, brushSize);
+void createFrame(Stroke pv, int i){
+  brushSize = pv.size;
+  PVector p = pv.pos;
+  mode = pv.mode;
+  drawStroke(pv)
   if(i%20 == 0){
     saveIncremental("frame", "png");
   }
+}
+
+void drawStroke(Stroke s){
+	drawPoint(s.pos, s.pen, s.mode, s.size);
 }
 
 void drawPoint(PVector p, color pen, int mode, float brushSize){
@@ -132,9 +146,9 @@ void drawPoint(PVector p, color pen, int mode, float brushSize){
 
 void setBg(){
   
-  bgPoints = new ArrayList<Object[]>();
-  for(Object[] arr : points){
-    bgPoints.add(arr.clone());
+  bgPoints = new ArrayList<Stroke>();
+  for(Stroke stroke : points){
+    bgPoints.add(stroke.clone());
   }
   saveBgData();
   saveFrame(savePath("bg.png"));
@@ -143,8 +157,8 @@ void setBg(){
 
 void saveBgData(){
   PrintWriter output = createWriter("bg.txt");
-  for(Object[] pv: bgPoints){
-    output.println(pv[0] + "|" + pv[1] + "|" + pv[2] + "|" + pv[3]);
+  for(Stroe pv: bgPoints){
+    output.println(stroke.pos + "|" + stroke.pen + "|" + stroke.size + "|" + stroke.mode);
   }
   output.flush();
   output.close();
@@ -153,14 +167,14 @@ void saveBgData(){
 void drawBgFromData(){
   if(bgPoints != null && bgPoints.size() > 0){
      //use point list
-   for(Object[] arr : bgPoints){
-     drawPoint((PVector)arr[0], (color)arr[1], (int)arr[3], (float)arr[2]);
+   for(Stroke stroke : bgPoints){
+	 drawStroke(stroke);
    }
   }else{
     //try file
     File f = new File(sketchPath("bg.txt"));
     if(f.exists()){
-      bgPoints = new ArrayList<Object[]>();
+      bgPoints = new ArrayList<Stroke>();
       String[] lines = loadStrings("bg.txt");
       for(String s : lines){
         String[] p = s.split("\\|");
@@ -173,17 +187,12 @@ void drawBgFromData(){
         color c = color(int(p[1]));
         float size = float(p[2]);
         int m = int(p[3]);
-    Object[] arr = new Object[4];
-    arr[0] = pv;
-    arr[1] = c;
-    arr[2] = size;
-    arr[3] = m;
-    bgPoints.add(arr);
-        drawPoint(pv, c, m, size);
+    	Stroke strk = new Stroke(pv, c, size, m);
+    	bgPoints.add(strk);
+		drawStroke(strk);        
+      }
     }
   }
-  }
-  
 }
 
 void next(){
@@ -198,10 +207,8 @@ void next(){
       imageMode(CORNER);
     }
     drawBgFromData();
-    for(Object[] pv: points){
-      brushSize = (float)pv[2];
-      PVector p = (PVector)pv[0];
-      drawPoint(p, (color) pv[1], (int) pv[3], brushSize);
+    for(Stroke pv: points){
+      drawStroke(pv);
     }
   }
   
@@ -229,10 +236,8 @@ void next(){
       tint(255);
       background(bgColor);
       tint(255, 160);
-      for(Object[] pv: points){
-        brushSize = (float)pv[2];
-        PVector p = (PVector)pv[0];
-        drawPoint(p, (color) pv[1], (int) pv[3], brushSize);
+      for(Stroke pv: points){
+		drawStroke(pv);
       }
       //tint(255);
     }
@@ -251,7 +256,7 @@ void next(){
     imageMode(CORNER);
     drawBgFromData();
   }
-  points = new ArrayList<Object[]>();
+  points = new ArrayList<Stroke>();
 }
 
 void saveIncremental(String prefix,String extension) {
