@@ -25,10 +25,10 @@
 */
 
 class Stroke {
-	PVector pos;
-	color pen;
-	float size;
-	int mode;
+	final PVector pos;
+	final color pen;
+	final float size;
+	final int mode;
 
 	Stroke(PVector pos, color pen, float size, int mode){
 		this.pos = pos;
@@ -50,6 +50,9 @@ class Stroke {
 
   	static Stroke fromString(String line) {
     	String[] parts = split(line, '|');
+		if(parts.length != 4){
+			throw new RuntimeException("Bad stroke line: " + line);
+		}
     	String[] coordParts = split(parts[0], ',');
 
 	    float x = float(trim(coordParts[0]));
@@ -135,10 +138,10 @@ void createFrame(Stroke pv, int i){
 }
 
 void drawStroke(Stroke s){
-	drawPoint(s.pos, s.pen, s.mode, s.size);
+	drawStrokeAt(s.pos, s.pen, s.mode, s.size);
 }
 
-void drawPoint(PVector p, color pen, int mode, float brushSize){
+void drawStrokeAt(PVector p, color pen, int mode, float brushSize){
   stroke(pen);
   fill(pen);
   float d = brushSize / 3;
@@ -165,7 +168,7 @@ void drawPoint(PVector p, color pen, int mode, float brushSize){
 
 void setBg(){
   
-  bgPoints = new ArrayList<Stroke>();
+  bgPoints.clear();
   for(Stroke stroke : points){
     bgPoints.add(new Stroke(stroke));
   }
@@ -191,7 +194,7 @@ void drawBgFromData(){
   } else {
     File f = new File(sketchPath("bg.txt"));
     if (f.exists()) {
-      bgPoints = new ArrayList<Stroke>();
+      bgPoints.clear();
       String[] lines = loadStrings("bg.txt");
       for (String s : lines) {
         Stroke strk = Stroke.fromString(s);
@@ -260,7 +263,7 @@ void next(){
     imageMode(CORNER);
     drawBgFromData();
   }
-  points = new ArrayList<Stroke>();
+  points.clear();
 }
 
 String frameName(int index, String prefix, String extension) {
