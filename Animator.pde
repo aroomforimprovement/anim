@@ -394,7 +394,7 @@ void renderForwardLoop(){
   println("renderForwardLoop");
   forwardLoopOn = false;
   println("Forward loop OFF");
-  renderLoop(forwardLoop);
+  forwardLoop = renderLoop(forwardLoop);
 }
 
 void startBackwardLoop(){
@@ -408,11 +408,11 @@ void renderBackwardLoop(){
   println("renderBackwardLoop");
   backwardLoopOn = false;
   println("Backward loop OFF");
-  renderLoop(backwardLoop);
+  backwardLoop = renderLoop(backwardLoop);
 }
 
 
-void renderLoop(ArrayList<String>() loop){
+ArrayList<String> renderLoop(ArrayList<String> loop){
 	if(loop == null || loop.size() < 1){
     println("nothing in forwardLoop");
     return;
@@ -442,12 +442,12 @@ void renderLoop(ArrayList<String>() loop){
     copyFrame(new File(savePath(s)), new File(savePath(newFilename)));
     newLoop.add(newFilename);
   }
-  loop = new ArrayList<String>(newLoop);
   tint(255, 255);
   imageMode(CENTER);
-  image(loadImage(backwardLoop.get(backwardLoop.size() -1 )), 0, 0);
+  image(loadImage(loop.get(backwardLoop.size() -1 )), 0, 0);
   imageMode(CORNER);
   println("finished renderLoop");
+  return newLoop;
 }
 
 void fileSelected(File file){
