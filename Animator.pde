@@ -83,8 +83,8 @@ void createFrames(){
   }else{
     background(bgColor);
   }
-  for(Object[] pv : points){
-    createFrame(pv, points.indexOf(pv));
+  for(int i = 0; i < points.size(); i++){
+    createFrame(points.get(i), i);
   }
   println("all frames created");
   forwardLoopOn = false;
@@ -621,6 +621,23 @@ private void setTraceMode(){
   }
 }
 
+void incrementColour(key){
+  float r = red(pen);
+  float g = green(pen);
+  float b = blue(pen);
+
+  if (key == '[') {
+    r = max(0, r - 5);
+    g = max(0, g - 5);
+    b = max(0, b - 5);
+  } else if (key == ']') {
+    r = min(255, r + 5);
+    g = min(255, g + 5);
+    b = min(255, b + 5);
+  }
+  pen = color(r, g, b, alpha(pen));
+}
+
 /*
 *  ENTER = createFrames
 *  SHIFT = setBg
@@ -745,10 +762,8 @@ void keyPressed(){
  }else if(key == 'z'){
    println("PEN = TRANS");
    pen = color(255, 10);
- }else if(key == '['){
-   pen -= color(1, 1, 1);
- }else if(key == ']'){
-   pen += color(1, 1, 1);
+ }else if(key == '[' || key == ']'){
+    incrementColour(key);   
  }else if(key == 'n' || keyCode == CONTROL){
    next();
  //}else if(key == 'o'){
