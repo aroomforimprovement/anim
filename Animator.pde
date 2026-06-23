@@ -33,8 +33,8 @@ int bgColor = 0;
 
 ArrayList<Point> points = new ArrayList<Point>();
 ArrayList<Point> bgPoints = new ArrayList<Point>();
-ArrayList<String> forwardLoop;
-ArrayList<String> backwardLoop;
+ArrayList<String> forwardLoop = new ArrayList<String>();
+ArrayList<String> backwardLoop = new ArrayList<String>();
 boolean forwardLoopOn;
 boolean backwardLoopOn;
 int mode;
@@ -379,9 +379,8 @@ void setLastFrame(String prefix, String extension){
 
 void startForwardLoop(){
   println("startForwardLoop");
-  forwardLoop = new ArrayList<String>();
+  forwardLoop.clear();
   forwardLoopOn = true;
-  
 }
 
 void renderForwardLoop(){
@@ -392,32 +391,7 @@ void renderForwardLoop(){
     println("nothing in forwardLoop");
     return;
   }
-  ArrayList<String> newLoop = new ArrayList<String>();
-  String lastFilename = forwardLoop.get(forwardLoop.size() - 1).substring(5, 9);
-  int lastN = parseInt(lastFilename);
-  String firstFilename = forwardLoop.get(0).substring(5, 9);
-  int firstN = parseInt(firstFilename);
-  int diff = lastN - firstN;
-  println("FIRST FRAME: " + firstFilename);
-  println("LAST FRAME: " + lastFilename);
-  println("DIFF: " + diff);
-  for(String s : forwardLoop){
-    println("loop file name: " + s);
-    String oldFilename = s;
-    String n = oldFilename.substring(5, 9);
-    int fileNumber = parseInt(n);
-    fileNumber += diff + 1;
-    String newFilename = "frame";
-    newFilename += getFileNumberPrefix(fileNumber);
-    newFilename += fileNumber;
-    println("FILE NUMBER: " + fileNumber);
-    newFilename += ".png";
-    println("NEW FILE NAME: " + newFilename);
-    
-    copyFrame(new File(savePath(s)), new File(savePath(newFilename)));
-    newLoop.add(newFilename);
-  }
-  forwardLoop = newLoop;
+  forwardLoop = getRenderedLoop(forwardLoop);
   tint(255, 255);
   drawImageCentered(loadImage(forwardLoop.get(forwardLoop.size() -1 )));
   println("finished renderForwardLoop");
@@ -425,49 +399,44 @@ void renderForwardLoop(){
 
 
 void startBackwardLoop(){
-  println("startBackwardLoop");
-  backwardLoop = new ArrayList<String>();
+  backwardLoop.clear();
   backwardLoopOn = true;
-  println("Backward Loop ON");
 }
 
 void renderBackwardLoop(){
   println("renderBackwardLoop");
   backwardLoopOn = false;
-  println("Forward loop OFF");
+  println("Backward loop OFF");
   if(backwardLoop == null || backwardLoop.size() < 1){
-    println("nothing in forwardLoop");
+    println("nothing in backwardLoop");
     return;
   }
-  ArrayList<String> newLoop = new ArrayList<String>();
-  String lastFilename = backwardLoop.get(backwardLoop.size() - 1).substring(5, 9);
-  int lastN = parseInt(lastFilename);
-  String firstFilename = backwardLoop.get(0).substring(5, 9);
-  int firstN = parseInt(firstFilename);
-  int diff = lastN - firstN;
-  println("FIRST FRAME: " + firstFilename);
-  println("LAST FRAME: " + lastFilename);
-  println("DIFF: " + diff);
-  for(String s : backwardLoop){
-    println("loop file name: " + s);
-    String oldFilename = s;
-    String n = oldFilename.substring(5, 9);
-    int fileNumber = parseInt(n);
-    fileNumber += diff + 1;
-    String newFilename = "frame";
-    newFilename += getFileNumberPrefix(fileNumber);
-    newFilename += fileNumber;
-    println("FILE NUMBER: " + fileNumber);
-    newFilename += ".png";
-    println("NEW FILE NAME: " + newFilename);
-    
-    copyFrame(new File(savePath(s)), new File(savePath(newFilename)));
-    newLoop.add(newFilename);
-  }
-  backwardLoop = newLoop;
+  backwardLoop = getRenderedLoop(backwardLoop);
   tint(255, 255);
   drawImageCentered(loadImage(backwardLoop.get(backwardLoop.size() -1 )));
   println("finished renderBackwardLoop");
+}
+
+ArrayList<String> getRenderedLoop(ArrayList<String> loop){
+  ArrayList<String> newLoop = new ArrayList<String>();
+  String lastFilename = loop.get(loop.size() -1).substring(5, 9);
+  int lastN = parseInt(lastFilename);
+  String firstFilename = loop.get(0).substring(5, 9);
+  int firstN = parseInt(firstFilename);
+  int diff = lastN - firstN;
+  for(String s: loop){
+    String oldFilename = s;
+    String n = oldFilename.substring(5, 9);
+    int fileNumber = parseInt(n);
+    fileNumber += diff+1;
+    String newFilename = "frame";
+    newFilename += getFileNumberPrefix(fileNumber);
+    newFilename += fileNumber;
+    newFilename += ".png";
+    copyFrame(new File(savePath(s)), new File(savePath(newFilename)));
+    newLoop.add(newFilename);
+  }
+  return newLoop;
 }
 
 void fileSelected(File file){
