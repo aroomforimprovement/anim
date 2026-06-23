@@ -24,10 +24,9 @@
 *  a = New Layer
 */
 
-public static final int SINGLE = 101;
-public static final int MIRROR = 102;
-public static final int LAKE = 103;
-public static final int INDIA = 104;
+enum DrawMode {
+  SINGLE, MIRROR, LAKE, INDIA
+}
 
 int bgColor = 0;
 
@@ -37,7 +36,7 @@ ArrayList<String> forwardLoop = new ArrayList<String>();
 ArrayList<String> backwardLoop = new ArrayList<String>();
 boolean forwardLoopOn;
 boolean backwardLoopOn;
-int mode;
+DrawMode mode;
 boolean layerMode;
 boolean traceMode;
 boolean traceOverMode;
@@ -53,9 +52,9 @@ class Point {
   PVector pos;
   color pen;
   float size;
-  int mode;
+  DrawMode mode;
   
-  Point(PVector pos, color pen, float size, int mode){
+  Point(PVector pos, color pen, float size, DrawMode mode){
     this.pos = pos;
     this.pen = pen;
     this.size = size;
@@ -72,7 +71,7 @@ void setup(){
   fullScreen();
   background(bgColor);
   setLastFrame("frame", "png");
-  mode = SINGLE;
+  mode = DrawMode.SINGLE;
 }
 
 void draw(){
@@ -158,7 +157,7 @@ void setBg(){
 void saveBgData(){
   PrintWriter output = createWriter("bg.txt");
   for(Point pv: bgPoints){
-    output.println(pv.pos + "|" + pv.pen + "|" + pv.size + "|" + pv.mode);
+    output.println(pv.pos + "|" + pv.pen + "|" + pv.size + "|" + pv.mode.name());
   }
   output.flush();
   output.close();
@@ -186,7 +185,7 @@ void drawBgFromData(){
         PVector pv = new PVector(coords[0], coords[1]);
         color c = color(int(p[1]));
         float size = float(p[2]);
-        int m = int(p[3]);
+        DrawMode m = DrawMode.valueOf(p[3]);
     Point point = new Point(pv, c, size, m);
     bgPoints.add(point);
         drawPoint(point);
@@ -639,13 +638,13 @@ void keyPressed(){
  }else if(key == 'x'){
    background(bgColor);
  }else if(key == 's'){
-   mode = SINGLE;
+   mode = DrawMode.SINGLE;
  }else if(key == 'm'){
-   mode = MIRROR;
+   mode = DrawMode.MIRROR;
  }else if(key == 'l'){
-   mode = LAKE;
+   mode = DrawMode.LAKE;
  }else if(key == 'i'){
-   mode = INDIA;
+   mode = DrawMode.INDIA;
  }else if(key == 'c'){
    setLayerMode();
  }else if(key == 't'){
