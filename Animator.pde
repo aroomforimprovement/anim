@@ -62,7 +62,7 @@ class Point {
   }
   
   Point clone(){
-    return new Point(pos, pen, size, mode);
+    return new Point(pos.copy(), pen, size, mode);
   }
 }
 
@@ -93,8 +93,8 @@ void createFrames(){
   }else{
     background(bgColor);
   }
-  for(Point pv : points){
-    createFrame(pv, points.indexOf(pv));
+  for(int i = 0; i < points.size(); i++){
+    createFrame(points.get(i), i);
   }
   println("all frames created");
   forwardLoopOn = false;
@@ -247,38 +247,21 @@ void next(){
 }
 
 void saveIncremental(String prefix,String extension) {
-  int savecnt = 1;
-  boolean ok=false;
-  String filename="";
-  File f;
-  while(!ok) {
-    filename = prefix;  
-    filename += getFileNumberPrefix(savecnt);
-    filename += savecnt + "." +extension;
-    f=new File(savePath(filename));
-    if(!f.exists()) ok=true; // File doesn't exist
-    savecnt++;
-  }
+  int savecnt = findNextFreeFrameIndex(prefix, extension);
+  String filename = frameName(savecnt, prefix, extension);
   
-  int traceCnt = savecnt;
-  if(savecnt == 1){traceCnt=2;}
+  int traceCnt = savecnt+1;
+  //int traceCnt = max(2, savecnt);
+  
   if(traceMode){
-    String traceName = prefix + getFileNumberPrefix(traceCnt) + traceCnt + "." + extension; 
+    String traceName = frameName(traceCnt, prefix, extension);
     File trace = new File(sketchPath() + "/trace/" + traceName);
-    if(trace.exists()){
-      traceFrame = loadImage(trace.getPath());
-    }else{
-      traceFrame = null;
-    }
+    traceFrame = trace.exists() ? loadImage(trace.getPath()) : null;
   }
   if(layerMode){
-    String layerName = prefix + getFileNumberPrefix(traceCnt) + traceCnt + "." + extension; 
-      File layer = new File(sketchPath() + "/layer/" + layerName);
-      if(layer.exists()){
-        layerFrame = loadImage(layer.getPath());
-      }else{
-        layerFrame = null;
-      }
+    String layerName = frameName(traceCnt, prefix, extension);
+    File layer = new File(sketchPath() + "/layer/" + layerName);
+    layerFrame = layer.exists() ? loadImage(layer.getPath()) : null;
     }
   println("Saving "+filename);
   saveFrame(savePath(filename));
@@ -290,6 +273,22 @@ void saveIncremental(String prefix,String extension) {
     backwardLoop.add(filename);
   }
   
+}
+
+String frameName(int index, String prefix, String extension){
+  return prefix + nf(index, 4) + "." + extension;
+}
+
+int findNextFreeFrameIndex(String prefix, String extension){
+  int i = 1;
+  while(true){
+    String filename = frameName(i, prefix, extension);
+    File f = new File(savePath(filename));
+    if(!f.exists()){
+      return i;
+    }
+    i++;
+  }
 }
 
 void setNewLayer(){
