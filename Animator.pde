@@ -61,6 +61,17 @@ PImage img;
 PImage layerFrame;
 PImage traceFrame;
 
+boolean colourPickerOpen = false;
+ArrayList<Integer> colourHistory = new ArrayList<Integer>();
+color pickerSelection;
+
+int pickerX = 20;
+int pickerY = 20;
+int pickerW = 300;
+int pickerH = 200;
+
+PImage colourPickerImage;
+
 class Point {
   PVector pos;
   color pen;
@@ -85,16 +96,153 @@ void setup(){
   background(bgColor);
   setLastFrame("frame", "png");
   mode = DrawMode.SINGLE;
+  buildColourPicker();
+  pickerSelection = pen;
 }
 
 void draw(){
-  
+  if(colourPickerOpen){
+    drawColourPicker();
+  }
 }
+
+void mousePressed(){
+  if(!colourPickerOpen){
+    return;
+  }
+  if(selectPickerColour()){
+    return;
+  }
+  selectHistoryColour();
+}
+
+void selectHistoryColour(){
+  int swatchSize = 30;
+  int historyY = pickerY + pickerH + 20;
+  for(int i = 0; i < colourHistory.size(); i++){
+    int x = pickerX + i * (swatchSize + 5);
+    if(mouseX >= x && mouseX <= x + swatchSize &&
+      mouseY >= historyY && mouseY <= historyY + swatchSize){
+      pen = colourHistory.get(i);
+      return;
+    }
+  }
+}
+
+boolean selectPickerColour(){
+  if(mouseX < pickerX || mouseX > pickerX + pickerW || mouseY < pickerY || mouseY > pickerY + pickerH){
+    return false;
+  }
+  int px = mouseX - pickerX;
+  int py = mouseY - pickerY;
+  color chosen = colourPickerImage.get(px, py);
+  
+  pickerSelection = chosen;
+  pen = chosen;
+  
+  return true;
+}
+
+
 
 void mouseDragged(){
   Point point = new Point(new PVector(mouseX, mouseY), pen, brushSize, mode);
   points.add(point);
   drawPoint(point);
+}
+
+void buildColourPicker(){
+  colourPickerImage = createImage(pickerW, pickerH, RGB);
+  colourPickerImage.loadPixels();
+  for(int x = 0; x < pickerW; x++){
+      float h = map(x, 0, pickerW, 0, 255);
+    for(int y = 0; y < pickerH; y++){
+      float s = map(y, 0, pickerH, 255, 0);
+      colourPickerImage.pixels[y * pickerW + x] = colorHSB(h, s, 255);
+    }
+  }
+  colourPickerImage.updatePixels();
+}
+
+color colorHSB(float h, float s, float b){
+
+  colorMode(HSB, 255);
+  color c = color(h, s, b);
+  colorMode(RGB, 255);
+
+  return c;
+}
+
+void drawColourPicker(){
+  noTint();
+  image(colourPickerImage, pickerX, pickerY);
+  stroke(255);
+  noFill();
+  rect(pickerX, pickerY, pickerW, pickerH);
+  drawColourHistory();
+  fill(pen);
+  stroke(255);
+  rect(pickerX, pickerY + pickerH + 80, 60, 60);
+}
+
+void drawColourHistory(){
+  int swatchSize = 30;
+  int historyY = pickerY + pickerH + 20;
+  
+  for(int i = 0; i < colourHistory.size(); i++){
+    int x = pickerX + i * (swatchSize + 5);
+    fill(colourHistory.get(i));
+    stroke(255);
+    rect(x, historyY, swatchSize, swatchSize);
+  }
+}
+
+void addColourToHistory(color c){
+  if(colourHistory.size() > 0 &&
+     colourHistory.get(colourHistory.size() - 1) == c){
+    return;
+  }
+  for(Integer existing : colourHistory){
+    if(existing == c){
+      return;
+    }
+  }
+  colourHistory.add(c);
+  if(colourHistory.size() > 20){
+    colourHistory.remove(0);
+  }
+}
+
+void toggleColourPicker(){
+  if(colourPickerOpen){
+    addColourToHistory(pickerSelection);
+    colourPickerOpen = false;
+    redrawCurrentCanvas();
+  }else{
+    pickerSelection = pen;
+    colourPickerOpen = true;
+  }
+}
+
+void redrawCurrentCanvas(){
+
+  background(bgColor);
+
+  if(traceFrame != null){
+    tint(255, traceOverMode ? 255 : 160);
+    drawImageCentered(traceFrame);
+  }
+
+  if(layerFrame != null){
+    tint(255, traceMode ? 160 : 255);
+    drawImageCentered(layerFrame);
+  }
+
+  drawBgFromData();
+
+  for(Point p : points){
+    drawPoint(p);
+  }
 }
 
 void createFrames(){
@@ -718,6 +866,9 @@ void handleModeKeys(){
       break;
     case 'x':
       background(bgColor);
+      break;
+    case 'v':
+      toggleColourPicker();
       break;
   }
 }
