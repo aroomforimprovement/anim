@@ -21,7 +21,11 @@
 *  n / ctrl = next
 *  o = open file
 *  [ / ] = lighter / darker
+*  v = colour picker
+*  , / . = alpha +- 5
+*  - / = = alpha +- 100
 *  a = New Layer
+*
 */
 
 final color PEN_WHITE = color(255, 200);
