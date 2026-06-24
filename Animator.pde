@@ -580,6 +580,7 @@ void incrementColour(char key){
 *  t = trace mode ON / OFF
 *  q = trace over mode ON / OFF
 *  r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
+*  z = transparent, p = purple, u = brown, o = orange, h = grey
 *  z = transparent, p = purple, u = brown, o = orange, h = grey, u = brown
 *  n / ctrl = next
 *  a = setNewLayer
