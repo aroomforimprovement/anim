@@ -263,18 +263,14 @@ void saveIncremental(String prefix,String extension) {
   int savecnt = findNextFreeFrameIndex(prefix, extension);
   String filename = frameName(savecnt, prefix, extension);
   
-  int traceCnt = savecnt+1;
+  //int traceCnt = savecnt+1;
   //int traceCnt = max(2, savecnt);
   
   if(traceMode){
-    String traceName = frameName(traceCnt, prefix, extension);
-    File trace = new File(sketchPath() + "/trace/" + traceName);
-    traceFrame = trace.exists() ? loadImage(trace.getPath()) : null;
+    traceFrame = loadFrameFromFolder("trace");
   }
   if(layerMode){
-    String layerName = frameName(traceCnt, prefix, extension);
-    File layer = new File(sketchPath() + "/layer/" + layerName);
-    layerFrame = layer.exists() ? loadImage(layer.getPath()) : null;
+    layerFrame = loadFrameFromFolder("layer");
     }
   println("Saving "+filename);
   saveFrame(savePath(filename));
@@ -508,17 +504,8 @@ private void setLayerMode(){
      }
   }else{
      layerMode = true;
-     String filename = getNextFrameFilename();
-     File layer = new File(sketchPath() + "/layer/" + filename);
-     if(layer.exists()){
-       if(traceMode){
-         tint(255, 160);
-       }
-       layerFrame = loadImage(layer.getPath());
+     layerFrame = loadFrameFromFolder("layer");
        drawImageCentered(layerFrame);
-     }else{
-       layerFrame = null;
-     }
   }
 }
 
@@ -536,26 +523,24 @@ private void setTraceMode(){
     }
   }else{
     traceMode = true;
-    String filename = getNextFrameFilename();
-    File trace = new File(sketchPath() + "/trace/" + filename);
-    if(trace.exists()){
-      if(layerMode){
-        tint(255, 160);
-      }
-      traceFrame = loadImage(trace.getPath());
-      drawImageCentered(traceFrame);
-      stroke(bgColor, 100);
-      fill(bgColor, 100);
-      rect(0, 0, width, height);
-    }else{
-      traceFrame = null;
-    }
+    traceFrame = loadFrameFromFolder("trace");
+    tint(255, 160);
+    drawImageCentered(traceFrame);
+    stroke(bgColor, 100);
+    fill(bgColor, 100);
+    rect(0, 0, width, height);
   }
 }
 
 String getNextFrameFilename(){
   int index = findNextFreeFrameIndex("frame", "png");
   return frameName(index, "frame", "png");
+}
+
+PImage loadFrameFromFolder(String folder){
+  String filename = getNextFrameFilename();
+  File f = new File(sketchPath() + "/" + folder + "/" + filename);
+  return f.exists() ? loadImage(f.getPath()) : null;
 }
 
 void incrementColour(char key){
