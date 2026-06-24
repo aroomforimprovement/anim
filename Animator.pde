@@ -64,6 +64,7 @@ PImage traceFrame;
 boolean colourPickerOpen = false;
 ArrayList<Integer> colourHistory = new ArrayList<Integer>();
 color pickerSelection;
+int pickerAlpha;
 
 int pickerX = 20;
 int pickerY = 20;
@@ -183,6 +184,8 @@ void drawColourPicker(){
   fill(pen);
   stroke(255);
   rect(pickerX, pickerY + pickerH + 80, 60, 60);
+  fill(255);
+  text("α " + pickerAlpha, pickerX, pickerY + pickerH + 160);
 }
 
 void drawColourHistory(){
@@ -243,6 +246,24 @@ void redrawCurrentCanvas(){
   for(Point p : points){
     drawPoint(p);
   }
+}
+
+void incrementAlpha(int delta){
+
+  int a = int(alpha(pen));
+
+  a += delta;
+
+  a = constrain(a, 5, 255);
+
+  pen = color(
+    red(pen),
+    green(pen),
+    blue(pen),
+    a
+  );
+
+  pickerAlpha = a;
 }
 
 void createFrames(){
@@ -800,6 +821,18 @@ void handleColorKeys(){
     case '[':
     case ']':
       incrementColour(key);
+      break;
+    case ',':
+      incrementAlpha(-5);
+      break;
+    case '.':
+      incrementAlpha(5);
+      break;
+    case '-':
+      incrementAlpha(-100);
+      break;
+    case '=':
+      incrementAlpha(100);
       break;
   }
 }
