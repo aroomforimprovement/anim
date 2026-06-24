@@ -24,6 +24,19 @@
 *  a = New Layer
 */
 
+final color PEN_WHITE = color(255, 200);
+final color PEN_TRANSPARENT = color(255, 10);
+final color PEN_BLACK = color(0);
+final color PEN_SHADE = color(0, 10);
+final color PEN_GREY = color(150, 10);
+final color PEN_RED = color(185, 70, 70, 10);
+final color PEN_BLUE = color(120, 210, 230, 10);
+final color PEN_GREEN = color(30, 145, 30, 10);
+final color PEN_YELLOW = color(255, 255, 100, 10);
+final color PEN_PURPLE = color(221, 211, 255, 10);
+final color PEN_ORANGE = color(60, 47, 0, 10);
+final color PEN_BROWN = color(223, 183, 60, 10);
+
 enum DrawMode {
   SINGLE, MIRROR, LAKE, INDIA
 }
@@ -445,6 +458,7 @@ void fileSelected(File file){
 
 
 String getFileNumberPrefix(int fileNumber){
+  //return String.format("%04d", fileNumber);
   if(fileNumber < 10){
       return "000";
     }else if(fileNumber < 100){
@@ -587,120 +601,136 @@ private void setTraceMode(){
 *  ////!!!!o = open file
 *  [ / ] = lighter / darker
 */
+void handleSizeKeys(){
+  switch(key){
+    case '1':
+      brushSize = 5;
+      break;
+    case '2':
+      brushSize = 10;
+      break;
+    case '3':
+      brushSize = 15;
+      break;
+    case '4':
+      brushSize = 30;
+      break;
+    case '5':
+      brushSize = 45;
+      break;
+    case '6':
+      brushSize = 60;
+      break;
+    case '7':
+      brushSize += 20;
+  }
+}
+
+void handleColorKeys(){
+  switch(key){
+    case 'w':
+      pen = PEN_WHITE;
+      break;
+    case 'z':
+      pen = PEN_TRANSPARENT;
+      break;
+    case '0':
+      pen = PEN_BLACK;
+      break;
+    case '9':
+      pen = PEN_SHADE;
+      break;
+    case 'h':
+      pen = PEN_GREY;
+      break;
+    case 'r':
+      pen = PEN_RED;
+      break;
+    case 'b':
+      pen = PEN_BLUE;
+      break;
+    case 'g':
+      pen = PEN_GREEN;
+      break;
+    case 'y':
+      pen = PEN_YELLOW;
+      break;
+    case 'p':
+      pen = PEN_PURPLE;
+      break;
+    case 'o':
+      pen = PEN_ORANGE;
+      break;
+    case 'u':
+      pen = PEN_BROWN;
+      break;
+    
+  }
+}
+
+void handleRenderKeys(){
+  switch(keyCode){
+    case ENTER:
+      createFrames();
+      break;
+    case SHIFT:
+      setBg();
+      break;
+    case CONTROL:
+      next();
+      break;
+    case LEFT:
+      startForwardLoop();
+      break;
+    case RIGHT:
+      renderForwardLoop();
+      break;
+    case UP:
+      startBackwardLoop();
+      break;
+    case DOWN:
+      renderBackwardLoop();
+      break;
+  }
+}
+
+void handleModeKeys(){
+  switch(key){
+    case 's':
+      mode = DrawMode.SINGLE;
+      break;
+    case 'm':
+      mode = DrawMode.MIRROR;
+      break;
+    case 'l':
+      mode = DrawMode.LAKE;
+      break;
+    case 'i':
+      mode = DrawMode.INDIA;
+      break;
+    case 't':
+      setTraceMode();
+      break;
+    case 'c':
+      setLayerMode();
+      break;
+    case 'q':
+      traceOverMode = !traceOverMode;
+      break;
+    case 'k':
+      if(bgColor == 0){
+        bgColor = 255;
+      }else{
+        bgColor = 0;
+      }
+      break;   
+  }
+}
+
+
 void keyPressed(){
- if(keyCode == ENTER){
-   //setBg();
-   createFrames();
- }
- if(keyCode == SHIFT){
-   println("Set Background");
-   setBg();
- }
- if(keyCode == ALT){
-   if(pen == color(0) || pen == color(0, 200)){
-     pen = color(255, 160);
-     println("PEN = WHITE");
-   }else{
-      pen = color(0, 200); 
-      println("PEN = BLACK");
-   }
- }
- if(keyCode == LEFT){
-   startForwardLoop();
- }
- if(keyCode == RIGHT){
-   renderForwardLoop();
- }
- if(keyCode == UP){
-   startBackwardLoop();
- }
- if(keyCode == DOWN){
-   renderBackwardLoop();
- }
- if(key == '0'){
-   pen = color(0);
-   println("PEN = BLACK");
- }else  if(key == '1'){
-   brushSize = 5;
- }else if(key == '2'){
-   brushSize = 10;
- }else if(key == '3'){
-   brushSize = 15;
- }else if(key == '4'){
-   brushSize = 30;
- }else if(key == '5'){
-   brushSize = 45;
- }else if(key == '6'){
-   brushSize = 60;
- }else if(key == '7'){
-   brushSize += 20;
- }else if(key == 'x'){
-   background(bgColor);
- }else if(key == 's'){
-   mode = DrawMode.SINGLE;
- }else if(key == 'm'){
-   mode = DrawMode.MIRROR;
- }else if(key == 'l'){
-   mode = DrawMode.LAKE;
- }else if(key == 'i'){
-   mode = DrawMode.INDIA;
- }else if(key == 'c'){
-   setLayerMode();
- }else if(key == 't'){
-   setTraceMode();
- }else if(key == 'q'){
-   traceOverMode = !traceOverMode;
- }else if(key == 'a'){
-   setNewLayer();
- }else if(key == 'r'){
-    pen = color(185, 70, 70, 10);
-    println("PEN = RED");
- }else if(key == 'b'){
-    pen = color(120, 210, 230, 10);
-    println("PEN = BLUE");
- }else if(key == 'g'){
-   pen = color(30, 145, 30, 10);
-   println("PEN = GREEN");
- }else if(key == '9'){
-   pen = color(0, 10);
-   println("PEN = SHADE");
- }else if(key == 'w'){
-   pen = color(255, 200);
-   println("PEN = WHITE");
- }else if(key == 'y'){
-   pen = color(255, 255, 100, 10);
-   println("PEN = YELLOW");
- }else if(key == 'p'){
-   println("PEN = PURPLE");
-   pen = color(221, 211, 255, 10);
- }else if(key == 'o'){
-   println("PEN = ORANGE");
-   pen = color(60, 47, 0, 10);
- }else if(key == 'h'){
-   println("PEN = GREY");
-   pen = color(150, 10);
- }else if(key == 'u'){
-   println("PEN = BROWN");
-   pen = color(223, 183, 60, 50);
- }else if(key == 'z'){
-   println("PEN = TRANS");
-   pen = color(255, 10);
- }else if(key == '['){
-   pen -= color(1, 1, 1);
- }else if(key == ']'){
-   pen += color(1, 1, 1);
- }else if(key == 'n' || keyCode == CONTROL){
-   next();
- //}else if(key == 'o'){
- //  selectInput("Choose File", "fileSelected"); 
- }else if(key == 'k'){
-   if(bgColor == 0){
-     bgColor = 255;
-   }else{
-     bgColor = 0;
-   }
- }else{
-    println(key); 
-    println(keyCode);
- }
+  handleSizeKeys();
+  handleColorKeys();
+  handleRenderKeys();
+  handleModeKeys();
 }
