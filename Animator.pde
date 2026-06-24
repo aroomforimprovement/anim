@@ -508,18 +508,7 @@ private void setLayerMode(){
      }
   }else{
      layerMode = true;
-     boolean ok = false;
-     int savecnt = 1;
-     String filename = "";
-     File f;
-     while(!ok){
-       filename = "frame";
-       filename += getFileNumberPrefix(savecnt);
-       filename += savecnt + ".png";
-       f = new File(savePath(filename));
-       if(!f.exists()) ok = true;
-       savecnt++;
-     }
+     String filename = getNextFrameFilename();
      File layer = new File(sketchPath() + "/layer/" + filename);
      if(layer.exists()){
        if(traceMode){
@@ -547,18 +536,7 @@ private void setTraceMode(){
     }
   }else{
     traceMode = true;
-    boolean ok = false;
-    int savecnt = 1;
-    String filename = "";
-    File f;
-    while(!ok){
-      filename = "frame";
-      filename += getFileNumberPrefix(savecnt);
-      filename += savecnt + ".png";
-      f = new File(savePath(filename));
-      if(!f.exists()) ok = true;
-      savecnt++;
-    }
+    String filename = getNextFrameFilename();
     File trace = new File(sketchPath() + "/trace/" + filename);
     if(trace.exists()){
       if(layerMode){
@@ -573,6 +551,28 @@ private void setTraceMode(){
       traceFrame = null;
     }
   }
+}
+
+String getNextFrameFilename(){
+  int index = findNextFreeFrameIndex("frame", "png");
+  return frameName(index, "frame", "png");
+}
+
+void incrementColour(char key){
+  float r = red(pen);
+  float g = green(pen);
+  float b = blue(pen);
+
+  if (key == '[') {
+    r = max(0, r - 5);
+    g = max(0, g - 5);
+    b = max(0, b - 5);
+  } else if (key == ']') {
+    r = min(255, r + 5);
+    g = min(255, g + 5);
+    b = min(255, b + 5);
+  }
+  pen = color(r, g, b, alpha(pen));
 }
 
 /*
@@ -664,7 +664,10 @@ void handleColorKeys(){
     case 'u':
       pen = PEN_BROWN;
       break;
-    
+    case '[':
+    case ']':
+      incrementColour(key);
+      break;
   }
 }
 
@@ -718,12 +721,19 @@ void handleModeKeys(){
       traceOverMode = !traceOverMode;
       break;
     case 'k':
+    //flip background colour
       if(bgColor == 0){
         bgColor = 255;
       }else{
         bgColor = 0;
       }
-      break;   
+      break;  
+    case 'a':
+      setNewLayer();
+      break;
+    case 'x':
+      background(bgColor);
+      break;
   }
 }
 
