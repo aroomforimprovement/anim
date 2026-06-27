@@ -1,7 +1,7 @@
 /*
 *  To create a layer, make a folder next to the pde file called 'layer' and turn on layer mode
 *
-*  ENTER = createFrames
+*  ENTER = createFrames (live painting current frame)
 *  SHIFT = setBg
 *  ALT = WHITE / BLACK
 *  LEFT = start forward loop
@@ -17,9 +17,10 @@
 *  i = india (mandala) line
 *  c = layer mode ON / OFF
 *  t = trace mode ON / OFF
+*  q = trace over mode ON / OFF
 *  r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
-*  n / ctrl = next
-*  o = open file
+*  z = transparent, p = purple, u = brown, o = orange, h = grey, u = brown
+*  ctrl = next
 *  [ / ] = lighter / darker
 *  v = colour picker
 *  , / . = alpha +- 5
@@ -46,6 +47,7 @@ enum DrawMode {
 }
 
 int bgColor = 0;
+int liveDrawingThreshold = 40;
 
 ArrayList<Point> points = new ArrayList<Point>();
 ArrayList<Point> bgPoints = new ArrayList<Point>();
@@ -58,7 +60,7 @@ boolean layerMode;
 boolean traceMode;
 boolean traceOverMode;
 float brushSize = 5;
-color pen = color(255);
+color pen = color(255, 200);
 PImage image;
 PImage bg;
 PImage img;
@@ -253,13 +255,9 @@ void redrawCurrentCanvas(){
 }
 
 void incrementAlpha(int delta){
-
   int a = int(alpha(pen));
-
   a += delta;
-
   a = constrain(a, 5, 255);
-
   pen = color(
     red(pen),
     green(pen),
@@ -280,7 +278,10 @@ void createFrames(){
     background(bgColor);
   }
   for(int i = 0; i < points.size(); i++){
-    createFrame(points.get(i), i);
+    if(i % liveDrawingThreshold == 0){
+      drawPoint(points.get(i));
+      saveIncremental("frame", "png");
+    }
   }
   println("all frames created");
   forwardLoopOn = false;
@@ -288,13 +289,6 @@ void createFrames(){
   backwardLoopOn = false;
   println("Backward loop OFF");
   
-}
-
-void createFrame(Point pv, int i){
-  drawPoint(pv);
-  if(i%20 == 0){
-    saveIncremental("frame", "png");
-  }
 }
 
 void drawPoint(Point point){
@@ -716,6 +710,15 @@ PImage loadFrameFromFolder(String folder){
   return f.exists() ? loadImage(f.getPath()) : null;
 }
 
+void flipBackgroundColour(){
+    if(bgColor == 0){
+        bgColor = 255;
+      }else{
+        bgColor = 0;
+      }
+      background(bgColor);
+}
+
 void incrementColour(char key){
   float r = red(pen);
   float g = green(pen);
@@ -733,32 +736,6 @@ void incrementColour(char key){
   pen = color(r, g, b, alpha(pen));
 }
 
-/*
-*  ENTER = createFrames
-*  SHIFT = setBg
-*  ALT = WHITE / BLACK
-*  LEFT = start forward loop
-*  RIGHT = render forward loop
-*  UP = start backward loop
-*  DOWN = render backward loop
-*  0 = black
-*  1 - 6 = size
-*  7 = size++
-*  x = wipe background
-*  s = single line
-*  m = mirrored line
-*  l = lake (horizontal mirror) line
-*  i = india (mandala) line
-*  c = layer mode ON / OFF
-*  t = trace mode ON / OFF
-*  q = trace over mode ON / OFF
-*  r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
-*  z = transparent, p = purple, u = brown, o = orange, h = grey, u = brown
-*  n / ctrl = next
-*  a = setNewLayer
-*  ////!!!!o = open file
-*  [ / ] = lighter / darker
-*/
 void handleSizeKeys(){
   switch(key){
     case '1':
@@ -891,12 +868,7 @@ void handleModeKeys(){
       traceOverMode = !traceOverMode;
       break;
     case 'k':
-    //flip background colour
-      if(bgColor == 0){
-        bgColor = 255;
-      }else{
-        bgColor = 0;
-      }
+      flipBackgroundColour();
       break;  
     case 'a':
       setNewLayer();
