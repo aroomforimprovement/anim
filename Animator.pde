@@ -476,17 +476,17 @@ void setNewLayer(){
     int savecnt = 1;
     boolean ok = false;
     while(!ok){
+      foldername = "layer";
       foldername += getFileNumberPrefix(savecnt);
       foldername += savecnt;
       println("foldername: " + foldername);
       File fo = new File(sketchPath() + "/"+ foldername + "/");
       if(!fo.exists()){
         ok = true;
-        foldername = "layer" + getFileNumberPrefix(savecnt) + savecnt;
+        //foldername = "layer" + getFileNumberPrefix(savecnt) + savecnt;
         layerZero.renameTo(new File(sketchPath() + "/" + foldername + "/"));
       }
-      savecnt++;
-      
+      savecnt++; 
     }
     
   }
