@@ -150,9 +150,9 @@ void setup(){
 void draw(){
   
   if(drawerOpen){
-    drawerX = lerp(drawerX, 0, 0.05);
+    drawerX = lerp(drawerX, 0, 1);
   }else{
-    drawerX = lerp(drawerX, -drawerWidth, 0.05);
+    drawerX = lerp(drawerX, -drawerWidth, 1);
   }
   drawDrawer();
   
