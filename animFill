@@ -1,0 +1,3196 @@
+
+/*
+ * To create a layer, make a folder next to the pde file called 'layer' and turn on layer mode
+ *
+ * ENTER = createFrames (live painting current frame)
+ * SHIFT = setBg
+ * ALT = WHITE / BLACK
+ * LEFT = start forward loop
+ * RIGHT = render forward loop
+ * UP = start backward loop
+ * DOWN = render backward loop
+ * 0 = black
+ * 1 - 7 = size
+ * x = wipe background
+ * s = single line
+ * m = mirrored line
+ * l = lake (horizontal mirror) line
+ * i = india (mandala) line
+ * c = layer mode ON / OFF
+ * t = trace mode ON / OFF
+ * q = trace over mode ON / OFF
+ * r = red, g = green, b = blue, y = yellow, w = white, 9 = shade,
+ * z = transparent, p = purple, u = brown, o = orange, h = grey
+ * ctrl = next
+ * [ / ] = lighter / darker
+ * v = colour picker
+ * , / . = alpha +- 5
+ * - / = = alpha +- 100
+ * a = New Layer
+ * f = fill / bucket mode
+ *
+ */
+
+final color PEN_WHITE = color(255, 200);
+final color PEN_TRANSPARENT = color(255, 10);
+final color PEN_BLACK = color(0);
+final color PEN_SHADE = color(0, 10);
+final color PEN_GREY = color(150, 10);
+final color PEN_RED = color(185, 70, 70, 10);
+final color PEN_BLUE = color(120, 210, 230, 10);
+final color PEN_GREEN = color(30, 145, 30, 10);
+final color PEN_YELLOW = color(255, 255, 100, 10);
+final color PEN_PURPLE = color(221, 211, 255, 10);
+final color PEN_ORANGE = color(60, 47, 0, 10);
+final color PEN_BROWN = color(223, 183, 60, 10);
+
+
+enum DrawMode {
+  SINGLE, MIRROR, LAKE, INDIA
+}
+
+
+// ------------------------------------------------------------
+// GLOBALS
+// ------------------------------------------------------------
+
+int bgColor = 0;
+int liveDrawingThreshold = 40;
+
+ArrayList<Point> points = new ArrayList<Point>();
+ArrayList<Fill> fills = new ArrayList<Fill>();
+
+// Current frame drawing actions.
+// This preserves the exact order in which points and fills were made.
+ArrayList<DrawAction> actions = new ArrayList<DrawAction>();
+
+// Background actions.
+// These are the actions established by SHIFT / setBg().
+ArrayList<DrawAction> bgActions = new ArrayList<DrawAction>();
+
+ArrayList<Point> bgPoints = new ArrayList<Point>();
+ArrayList<Fill> bgFills = new ArrayList<Fill>();
+
+ArrayList<String> forwardLoop = new ArrayList<String>();
+ArrayList<String> backwardLoop = new ArrayList<String>();
+
+boolean forwardLoopOn;
+boolean backwardLoopOn;
+
+DrawMode mode;
+
+boolean layerMode;
+boolean traceMode;
+boolean traceOverMode;
+
+boolean fillMode = false;
+
+// Fill tolerance.
+// Lower = more exact.
+// Higher = more forgiving but more likely to leak through boundaries.
+int fillTolerance = 20;
+
+float brushSize = 5;
+
+color pen = color(255, 200);
+
+PImage image;
+PImage bg;
+PImage img;
+PImage layerFrame;
+PImage traceFrame;
+
+
+// ------------------------------------------------------------
+// COLOUR PICKER
+// ------------------------------------------------------------
+
+boolean colourPickerOpen = false;
+
+ArrayList<Integer> colourHistory = new ArrayList<Integer>();
+
+color pickerSelection;
+int pickerAlpha;
+
+int pickerX = 20;
+int pickerY = 20;
+int pickerW = 300;
+int pickerH = 200;
+
+PImage colourPickerImage;
+
+
+// ------------------------------------------------------------
+// DRAW ACTION CLASSES
+// ------------------------------------------------------------
+
+// Base class for anything that can be replayed.
+class DrawAction {
+}
+
+
+// ------------------------------------------------------------
+// POINT
+// ------------------------------------------------------------
+
+class Point extends DrawAction {
+
+  PVector pos;
+  color pen;
+  float size;
+  DrawMode mode;
+
+  Point(PVector pos, color pen, float size, DrawMode mode) {
+    this.pos = pos;
+    this.pen = pen;
+    this.size = size;
+    this.mode = mode;
+  }
+
+  Point clone() {
+    return new Point(
+      pos.copy(),
+      pen,
+      size,
+      mode
+    );
+  }
+}
+
+
+// ------------------------------------------------------------
+// FILL
+// ------------------------------------------------------------
+
+class Fill extends DrawAction {
+
+  int x;
+  int y;
+
+  color fillColor;
+
+  int tolerance;
+
+  Fill(int x, int y, color fillColor, int tolerance) {
+    this.x = x;
+    this.y = y;
+    this.fillColor = fillColor;
+    this.tolerance = tolerance;
+  }
+
+  Fill clone() {
+    return new Fill(
+      x,
+      y,
+      fillColor,
+      tolerance
+    );
+  }
+}
+
+
+// ------------------------------------------------------------
+// SETUP
+// ------------------------------------------------------------
+
+void setup() {
+
+  // size(1080, 1080);
+  fullScreen();
+
+  background(bgColor);
+
+  setLastFrame("frame", "png");
+
+  mode = DrawMode.SINGLE;
+
+  buildColourPicker();
+
+  pickerSelection = pen;
+
+  pickerAlpha = int(alpha(pen));
+}
+
+
+// ------------------------------------------------------------
+// DRAW
+// ------------------------------------------------------------
+
+void draw() {
+
+  if (colourPickerOpen) {
+    drawColourPicker();
+  }
+}
+
+
+// ------------------------------------------------------------
+// MOUSE
+// ------------------------------------------------------------
+
+void mousePressed() {
+
+  // Colour picker takes priority.
+  if (colourPickerOpen) {
+
+    if (selectPickerColour()) {
+      return;
+    }
+
+    selectHistoryColour();
+
+    return;
+  }
+
+
+  // Fill mode.
+  if (fillMode) {
+
+    doFill(
+      mouseX,
+      mouseY
+    );
+
+    return;
+  }
+}
+
+
+void mouseDragged() {
+
+  // Don't draw while using the colour picker.
+  if (colourPickerOpen) {
+    return;
+  }
+
+  // Fill mode only works on click.
+  if (fillMode) {
+    return;
+  }
+
+
+  Point point = new Point(
+    new PVector(mouseX, mouseY),
+    pen,
+    brushSize,
+    mode
+  );
+
+  points.add(point);
+
+  actions.add(point);
+
+  drawPoint(point);
+}
+
+
+// ------------------------------------------------------------
+// FILL
+// ------------------------------------------------------------
+
+void doFill(int x, int y) {
+
+  Fill f = new Fill(
+    x,
+    y,
+    pen,
+    fillTolerance
+  );
+
+  // Record the fill.
+  fills.add(f);
+
+  // Record it in the same action stream as drawing.
+  actions.add(f);
+
+  // Immediately perform it on the visible canvas.
+  drawFill(f);
+}
+
+
+void drawFill(Fill f) {
+
+  floodFill(
+    f.x,
+    f.y,
+    f.fillColor,
+    f.tolerance
+  );
+}
+
+
+// ------------------------------------------------------------
+// FLOOD FILL
+// ------------------------------------------------------------
+//
+// Scanline flood fill.
+// This avoids recursive calls, which can easily overflow the
+// Java stack when filling large areas.
+//
+// The fill uses colour tolerance so anti-aliased / translucent
+// brush boundaries don't have to be perfectly solid.
+//
+
+void floodFill(
+  int startX,
+  int startY,
+  color newColor,
+  int tolerance
+) {
+
+  startX = constrain(
+    startX,
+    0,
+    width - 1
+  );
+
+  startY = constrain(
+    startY,
+    0,
+    height - 1
+  );
+
+
+  loadPixels();
+
+
+  int target =
+    pixels[startY * width + startX];
+
+
+  // If the new colour is already close enough,
+  // there is nothing to do.
+  if (colourDistance(target, newColor) <= tolerance) {
+
+    updatePixels();
+
+    return;
+  }
+
+
+  ArrayList<PVector> stack =
+    new ArrayList<PVector>();
+
+
+  stack.add(
+    new PVector(
+      startX,
+      startY
+    )
+  );
+
+
+  while (stack.size() > 0) {
+
+    PVector p =
+      stack.remove(
+        stack.size() - 1
+      );
+
+
+    int x = int(p.x);
+    int y = int(p.y);
+
+
+    if (
+      x < 0 ||
+      x >= width ||
+      y < 0 ||
+      y >= height
+      ) {
+
+      continue;
+    }
+
+
+    int index =
+      y * width + x;
+
+
+    if (
+      !sameColour(
+        pixels[index],
+        target,
+        tolerance
+        )
+      ) {
+
+      continue;
+    }
+
+
+    // --------------------------------------------------------
+    // Find left edge
+    // --------------------------------------------------------
+
+    int left = x;
+
+    while (
+      left >= 0 &&
+      sameColour(
+        pixels[y * width + left],
+        target,
+        tolerance
+        )
+      ) {
+
+      left--;
+    }
+
+    left++;
+
+
+    // --------------------------------------------------------
+    // Find right edge
+    // --------------------------------------------------------
+
+    int right = x;
+
+    while (
+      right < width &&
+      sameColour(
+        pixels[y * width + right],
+        target,
+        tolerance
+        )
+      ) {
+
+      right++;
+    }
+
+    right--;
+
+
+    // --------------------------------------------------------
+    // Fill this horizontal span
+    // --------------------------------------------------------
+
+    for (int i = left; i <= right; i++) {
+
+      int pixelIndex =
+        y * width + i;
+
+      // Composite the fill colour over the existing canvas
+      // rather than simply replacing the pixel. This means
+      // your translucent pen colours behave like translucent
+      // paint.
+      pixels[pixelIndex] =
+        compositeFillColour(
+          pixels[pixelIndex],
+          newColor
+        );
+    }
+
+
+    // --------------------------------------------------------
+    // Search row above
+    // --------------------------------------------------------
+
+    if (y > 0) {
+
+      addFillSpans(
+        stack,
+        y - 1,
+        left,
+        right,
+        target,
+        tolerance
+      );
+    }
+
+
+    // --------------------------------------------------------
+    // Search row below
+    // --------------------------------------------------------
+
+    if (y < height - 1) {
+
+      addFillSpans(
+        stack,
+        y + 1,
+        left,
+        right,
+        target,
+        tolerance
+      );
+    }
+  }
+
+
+  updatePixels();
+}
+
+
+// ------------------------------------------------------------
+// ADD FILL SPANS
+// ------------------------------------------------------------
+
+void addFillSpans(
+  ArrayList<PVector> stack,
+  int y,
+  int left,
+  int right,
+  color target,
+  int tolerance
+) {
+
+  boolean inSpan = false;
+
+
+  for (int x = left; x <= right; x++) {
+
+    boolean match =
+      sameColour(
+        pixels[y * width + x],
+        target,
+        tolerance
+      );
+
+
+    if (match && !inSpan) {
+
+      stack.add(
+        new PVector(
+          x,
+          y
+        )
+      );
+
+      inSpan = true;
+
+    } else if (!match) {
+
+      inSpan = false;
+    }
+  }
+}
+
+
+// ------------------------------------------------------------
+// COLOUR COMPARISON
+// ------------------------------------------------------------
+
+boolean sameColour(
+  color a,
+  color b,
+  int tolerance
+) {
+
+  return colourDistance(a, b) <= tolerance;
+}
+
+
+float colourDistance(
+  color a,
+  color b
+) {
+
+  float dr =
+    red(a) - red(b);
+
+  float dg =
+    green(a) - green(b);
+
+  float db =
+    blue(a) - blue(b);
+
+
+  return sqrt(
+    dr * dr +
+    dg * dg +
+    db * db
+  );
+}
+
+
+// ------------------------------------------------------------
+// COMPOSITE TRANSLUCENT FILL
+// ------------------------------------------------------------
+//
+// Unlike assigning newColor directly to pixels[], this keeps
+// the canvas opaque and composites translucent pen colours
+// over the existing pixel.
+//
+
+color compositeFillColour(
+  color base,
+  color over
+) {
+
+  float a =
+    alpha(over) / 255.0;
+
+
+  float r =
+    lerp(
+      red(base),
+      red(over),
+      a
+    );
+
+  float g =
+    lerp(
+      green(base),
+      green(over),
+      a
+    );
+
+  float b =
+    lerp(
+      blue(base),
+      blue(over),
+      a
+    );
+
+
+  return color(
+    r,
+    g,
+    b,
+    255
+  );
+}
+
+
+// ------------------------------------------------------------
+// DRAW ACTION
+// ------------------------------------------------------------
+
+void drawAction(DrawAction action) {
+
+  if (action instanceof Point) {
+
+    drawPoint(
+      (Point) action
+    );
+
+  } else if (action instanceof Fill) {
+
+    drawFill(
+      (Fill) action
+    );
+  }
+}
+
+
+// ------------------------------------------------------------
+// DRAW ALL ACTIONS
+// ------------------------------------------------------------
+
+void drawActions(
+  ArrayList<DrawAction> actionList
+) {
+
+  for (DrawAction action : actionList) {
+
+    drawAction(action);
+  }
+}
+
+
+// ------------------------------------------------------------
+// COLOUR PICKER
+// ------------------------------------------------------------
+
+void buildColourPicker() {
+
+  colourPickerImage =
+    createImage(
+      pickerW,
+      pickerH,
+      RGB
+    );
+
+
+  colourPickerImage.loadPixels();
+
+
+  for (int x = 0; x < pickerW; x++) {
+
+    float h =
+      map(
+        x,
+        0,
+        pickerW,
+        0,
+        255
+      );
+
+
+    for (int y = 0; y < pickerH; y++) {
+
+      float s =
+        map(
+          y,
+          0,
+          pickerH,
+          255,
+          0
+        );
+
+
+      colourPickerImage.pixels[
+        y * pickerW + x
+      ] =
+        colorHSB(
+          h,
+          s,
+          255
+        );
+    }
+  }
+
+
+  colourPickerImage.updatePixels();
+}
+
+
+color colorHSB(
+  float h,
+  float s,
+  float b
+) {
+
+  colorMode(
+    HSB,
+    255
+  );
+
+  color c =
+    color(
+      h,
+      s,
+      b
+    );
+
+  colorMode(
+    RGB,
+    255
+  );
+
+  return c;
+}
+
+
+void drawColourPicker() {
+
+  noTint();
+
+  image(
+    colourPickerImage,
+    pickerX,
+    pickerY
+  );
+
+
+  stroke(255);
+
+  noFill();
+
+  rect(
+    pickerX,
+    pickerY,
+    pickerW,
+    pickerH
+  );
+
+
+  drawColourHistory();
+
+
+  fill(pen);
+
+  stroke(255);
+
+  rect(
+    pickerX,
+    pickerY + pickerH + 80,
+    60,
+    60
+  );
+
+
+  fill(255);
+
+  text(
+    "α " + pickerAlpha,
+    pickerX,
+    pickerY + pickerH + 160
+  );
+}
+
+
+void drawColourHistory() {
+
+  int swatchSize = 30;
+
+  int historyY =
+    pickerY + pickerH + 20;
+
+
+  for (
+    int i = 0;
+    i < colourHistory.size();
+    i++
+    ) {
+
+    int x =
+      pickerX +
+      i * (swatchSize + 5);
+
+
+    fill(
+      colourHistory.get(i)
+    );
+
+    stroke(255);
+
+
+    rect(
+      x,
+      historyY,
+      swatchSize,
+      swatchSize
+    );
+  }
+}
+
+
+void addColourToHistory(color c) {
+
+  if (
+    colourHistory.size() > 0 &&
+    colourHistory.get(
+      colourHistory.size() - 1
+    ) == c
+    ) {
+
+    return;
+  }
+
+
+  for (color existing : colourHistory) {
+
+    if (existing == c) {
+      return;
+    }
+  }
+
+
+  colourHistory.add(c);
+
+
+  if (colourHistory.size() > 20) {
+
+    colourHistory.remove(0);
+  }
+}
+
+
+void toggleColourPicker() {
+
+  if (colourPickerOpen) {
+
+    addColourToHistory(
+      pickerSelection
+    );
+
+    colourPickerOpen = false;
+
+    redrawCurrentCanvas();
+
+  } else {
+
+    pickerSelection = pen;
+
+    pickerAlpha = int(alpha(pen));
+
+    colourPickerOpen = true;
+  }
+}
+
+
+void selectHistoryColour() {
+
+  int swatchSize = 30;
+
+  int historyY =
+    pickerY + pickerH + 20;
+
+
+  for (
+    int i = 0;
+    i < colourHistory.size();
+    i++
+    ) {
+
+    int x =
+      pickerX +
+      i * (swatchSize + 5);
+
+
+    if (
+      mouseX >= x &&
+      mouseX <= x + swatchSize &&
+      mouseY >= historyY &&
+      mouseY <= historyY + swatchSize
+      ) {
+
+      pen =
+        colourHistory.get(i);
+
+      pickerSelection = pen;
+
+      pickerAlpha =
+        int(alpha(pen));
+
+      return;
+    }
+  }
+}
+
+
+boolean selectPickerColour() {
+
+  if (
+    mouseX < pickerX ||
+    mouseX > pickerX + pickerW ||
+    mouseY < pickerY ||
+    mouseY > pickerY + pickerH
+    ) {
+
+    return false;
+  }
+
+
+  int px =
+    mouseX - pickerX;
+
+  int py =
+    mouseY - pickerY;
+
+
+  color chosen =
+    colourPickerImage.get(
+      px,
+      py
+    );
+
+
+  pickerSelection = chosen;
+
+  pen = chosen;
+
+  pickerAlpha =
+    int(alpha(pen));
+
+
+  return true;
+}
+
+
+// ------------------------------------------------------------
+// REDRAW CURRENT CANVAS
+// ------------------------------------------------------------
+
+void redrawCurrentCanvas() {
+
+  background(bgColor);
+
+
+  if (traceFrame != null) {
+
+    tint(
+      255,
+      traceOverMode ? 255 : 160
+    );
+
+    drawImageCentered(
+      traceFrame
+    );
+  }
+
+
+  if (layerFrame != null) {
+
+    tint(
+      255,
+      traceMode ? 160 : 255
+    );
+
+    drawImageCentered(
+      layerFrame
+    );
+  }
+
+
+  drawBgFromData();
+
+
+  // Replay current drawing in exact chronological order.
+  drawActions(actions);
+
+  noTint();
+}
+
+
+// ------------------------------------------------------------
+// ALPHA
+// ------------------------------------------------------------
+
+void incrementAlpha(int delta) {
+
+  int a =
+    int(alpha(pen));
+
+
+  a += delta;
+
+  a =
+    constrain(
+      a,
+      5,
+      255
+    );
+
+
+  pen =
+    color(
+      red(pen),
+      green(pen),
+      blue(pen),
+      a
+    );
+
+
+  pickerAlpha = a;
+}
+
+
+// ------------------------------------------------------------
+// CREATE FRAMES
+// ------------------------------------------------------------
+
+void createFrames() {
+
+  File f =
+    new File(
+      savePath("lastFrame.png")
+    );
+
+
+  if (f.exists()) {
+
+    tint(
+      255,
+      255
+    );
+
+    PImage p =
+      loadImage(
+        savePath("lastFrame.png")
+      );
+
+    drawImageCentered(p);
+
+  } else {
+
+    background(bgColor);
+  }
+
+
+  // Replay actions in their original order.
+  for (
+    int i = 0;
+    i < actions.size();
+    i++
+    ) {
+
+    drawAction(
+      actions.get(i)
+    );
+
+
+    if (
+      i % liveDrawingThreshold == 0
+      ) {
+
+      saveIncremental(
+        "frame",
+        "png"
+      );
+    }
+  }
+
+
+  println(
+    "all frames created"
+  );
+
+
+  forwardLoopOn = false;
+
+  println(
+    "Forward loop OFF"
+  );
+
+
+  backwardLoopOn = false;
+
+  println(
+    "Backward loop OFF"
+  );
+}
+
+
+// ------------------------------------------------------------
+// DRAW POINT
+// ------------------------------------------------------------
+
+void drawPoint(Point point) {
+
+  stroke(point.pen);
+
+  fill(point.pen);
+
+
+  ellipse(
+    point.pos.x,
+    point.pos.y,
+    point.size / 3,
+    point.size / 3
+  );
+
+
+  switch (point.mode) {
+
+  case SINGLE:
+
+    // Already done.
+    break;
+
+
+  case MIRROR:
+
+    ellipse(
+      width - point.pos.x,
+      point.pos.y,
+      point.size / 3,
+      point.size / 3
+    );
+
+    break;
+
+
+  case LAKE:
+
+    ellipse(
+      point.pos.x,
+      height - point.pos.y,
+      point.size / 3,
+      point.size / 3
+    );
+
+    break;
+
+
+  case INDIA:
+
+    ellipse(
+      point.pos.x,
+      height - point.pos.y,
+      point.size / 3,
+      point.size / 3
+    );
+
+
+    ellipse(
+      width - point.pos.x,
+      height - point.pos.y,
+      point.size / 3,
+      point.size / 3
+    );
+
+
+    ellipse(
+      width - point.pos.x,
+      point.pos.y,
+      point.size / 3,
+      point.size / 3
+    );
+
+    break;
+
+
+  default:
+
+    println(
+      "ERROR - DEFAULT MODE: " +
+      point.mode +
+      " @drawPoint()"
+    );
+  }
+}
+
+
+// ------------------------------------------------------------
+// IMAGE
+// ------------------------------------------------------------
+
+void drawImageCentered(PImage img) {
+
+  if (img == null) {
+    return;
+  }
+
+
+  imageMode(CENTER);
+
+  image(
+    img,
+    width / 2,
+    height / 2
+  );
+
+  imageMode(CORNER);
+}
+
+
+// ------------------------------------------------------------
+// SET BACKGROUND
+// ------------------------------------------------------------
+
+void setBg() {
+
+  // Copy the complete current action history.
+  // This includes both points and fills.
+  bgActions =
+    new ArrayList<DrawAction>();
+
+
+  bgPoints =
+    new ArrayList<Point>();
+
+
+  bgFills =
+    new ArrayList<Fill>();
+
+
+  for (DrawAction action : actions) {
+
+    if (action instanceof Point) {
+
+      Point p =
+        ((Point) action).clone();
+
+      bgPoints.add(p);
+
+      bgActions.add(p);
+
+    } else if (action instanceof Fill) {
+
+      Fill f =
+        ((Fill) action).clone();
+
+      bgFills.add(f);
+
+      bgActions.add(f);
+    }
+  }
+
+
+  saveBgData();
+
+
+  saveFrame(
+    savePath("bg.png")
+  );
+
+
+  bg =
+    loadImage("bg.png");
+}
+
+
+// ------------------------------------------------------------
+// SAVE BACKGROUND DATA
+// ------------------------------------------------------------
+//
+// New format:
+//
+// P|[ x, y, z ]|color|size|mode
+// F|x|y|color|tolerance
+//
+// The loader below also supports your old point-only bg.txt.
+//
+
+void saveBgData() {
+
+  PrintWriter output =
+    createWriter("bg.txt");
+
+
+  for (DrawAction action : bgActions) {
+
+    if (action instanceof Point) {
+
+      Point p =
+        (Point) action;
+
+
+      output.println(
+        "P|" +
+        p.pos +
+        "|" +
+        p.pen +
+        "|" +
+        p.size +
+        "|" +
+        p.mode.name()
+      );
+
+
+    } else if (action instanceof Fill) {
+
+      Fill f =
+        (Fill) action;
+
+
+      output.println(
+        "F|" +
+        f.x +
+        "|" +
+        f.y +
+        "|" +
+        f.fillColor +
+        "|" +
+        f.tolerance
+      );
+    }
+  }
+
+
+  output.flush();
+
+  output.close();
+}
+
+
+// ------------------------------------------------------------
+// DRAW BACKGROUND FROM DATA
+// ------------------------------------------------------------
+
+void drawBgFromData() {
+
+  if (bgActions != null && bgActions.size() > 0) {
+
+    drawActions(bgActions);
+
+    return;
+  }
+
+
+  // Try file if there isn't already background data.
+  File f =
+    new File(
+      sketchPath("bg.txt")
+    );
+
+
+  if (!f.exists()) {
+    return;
+  }
+
+
+  bgActions =
+    new ArrayList<DrawAction>();
+
+
+  bgPoints =
+    new ArrayList<Point>();
+
+
+  bgFills =
+    new ArrayList<Fill>();
+
+
+  String[] lines =
+    loadStrings("bg.txt");
+
+
+  for (String s : lines) {
+
+    if (s == null || s.trim().length() == 0) {
+      continue;
+    }
+
+
+    // --------------------------------------------------------
+    // New fill format
+    // --------------------------------------------------------
+
+    if (s.startsWith("F|")) {
+
+      String[] p =
+        s.split("\\|");
+
+
+      if (p.length >= 5) {
+
+        int x =
+          int(p[1]);
+
+        int y =
+          int(p[2]);
+
+        color c =
+          color(
+            int(p[3])
+          );
+
+        int tolerance =
+          int(p[4]);
+
+
+        Fill fill =
+          new Fill(
+            x,
+            y,
+            c,
+            tolerance
+          );
+
+
+        bgFills.add(fill);
+
+        bgActions.add(fill);
+      }
+
+
+      continue;
+    }
+
+
+    // --------------------------------------------------------
+    // New point format
+    // --------------------------------------------------------
+
+    if (s.startsWith("P|")) {
+
+      String[] p =
+        s.split("\\|");
+
+
+      if (p.length >= 5) {
+
+        String position =
+          p[1];
+
+
+        position =
+          position
+          .replace("[", "")
+          .replace("]", "")
+          .trim();
+
+
+        String[] coS =
+          position.split(",");
+
+
+        float x =
+          float(
+            coS[0].trim()
+          );
+
+
+        float y =
+          float(
+            coS[1].trim()
+          );
+
+
+        PVector pv =
+          new PVector(
+            x,
+            y
+          );
+
+
+        color c =
+          color(
+            int(p[2])
+          );
+
+
+        float size =
+          float(p[3]);
+
+
+        DrawMode m =
+          DrawMode.valueOf(
+            p[4]
+          );
+
+
+        Point point =
+          new Point(
+            pv,
+            c,
+            size,
+            m
+          );
+
+
+        bgPoints.add(point);
+
+        bgActions.add(point);
+      }
+
+
+      continue;
+    }
+
+
+    // --------------------------------------------------------
+    // OLD POINT FORMAT
+    // --------------------------------------------------------
+    //
+    // Your original bg.txt used:
+    //
+    // [ x, y, z ]|color|size|mode
+    //
+    // Keep support for that format so old projects still load.
+    //
+
+    String[] p =
+      s.split("\\|");
+
+
+    if (p.length >= 4) {
+
+      String position =
+        p[0]
+        .replace("[", "")
+        .replace("]", "")
+        .trim();
+
+
+      String[] coS =
+        position.split(",");
+
+
+      if (coS.length >= 2) {
+
+        float x =
+          float(
+            coS[0].trim()
+          );
+
+
+        float y =
+          float(
+            coS[1].trim()
+          );
+
+
+        PVector pv =
+          new PVector(
+            x,
+            y
+          );
+
+
+        color c =
+          color(
+            int(p[1])
+          );
+
+
+        float size =
+          float(p[2]);
+
+
+        DrawMode m =
+          DrawMode.valueOf(
+            p[3]
+          );
+
+
+        Point point =
+          new Point(
+            pv,
+            c,
+            size,
+            m
+          );
+
+
+        bgPoints.add(point);
+
+        bgActions.add(point);
+      }
+    }
+  }
+
+
+  // Render loaded background.
+  drawActions(bgActions);
+}
+
+
+// ------------------------------------------------------------
+// NEXT FRAME
+// ------------------------------------------------------------
+
+void next() {
+
+  if (traceMode) {
+
+    if (!traceOverMode) {
+
+      background(bgColor);
+    }
+
+
+    if (
+      layerMode &&
+      layerFrame != null
+      ) {
+
+      tint(
+        255,
+        255
+      );
+
+      drawImageCentered(
+        layerFrame
+      );
+    }
+
+
+    drawBgFromData();
+
+
+    // Replay current frame.
+    drawActions(actions);
+  }
+
+
+  saveIncremental(
+    "frame",
+    "png"
+  );
+
+
+  saveFrame(
+    savePath("lastFrame.png")
+  );
+
+
+  tint(
+    255,
+    160
+  );
+
+
+  if (
+    layerFrame == null &&
+    traceFrame == null
+    ) {
+
+    bg =
+      loadImage("bg.png");
+
+
+    if (bg != null) {
+
+      drawImageCentered(bg);
+
+    } else {
+
+      fill(
+        bgColor,
+        200
+      );
+
+      stroke(
+        bgColor,
+        200
+      );
+
+
+      rect(
+        0,
+        0,
+        width,
+        height
+      );
+    }
+
+
+  } else if (
+    layerFrame != null &&
+    traceFrame == null
+    ) {
+
+    drawImageCentered(
+      layerFrame
+    );
+
+    drawBgFromData();
+
+
+  } else if (
+    traceFrame != null &&
+    layerFrame == null
+    ) {
+
+    if (traceOverMode) {
+
+      tint(255);
+
+      background(bgColor);
+
+      tint(
+        255,
+        160
+      );
+
+
+      drawActions(actions);
+    }
+
+
+    drawImageCentered(
+      traceFrame
+    );
+
+    drawBgFromData();
+
+
+  } else {
+
+    drawImageCentered(
+      traceFrame
+    );
+
+    drawImageCentered(
+      layerFrame
+    );
+
+    drawBgFromData();
+  }
+
+
+  // Current frame is finished.
+  // Start the next frame with a clean action list.
+  points.clear();
+
+  fills.clear();
+
+  actions.clear();
+
+  noTint();
+}
+
+
+// ------------------------------------------------------------
+// SAVE INCREMENTAL
+// ------------------------------------------------------------
+
+void saveIncremental(
+  String prefix,
+  String extension
+) {
+
+  int savecnt =
+    findNextFreeFrameIndex(
+      prefix,
+      extension
+    );
+
+
+  String filename =
+    frameName(
+      savecnt,
+      prefix,
+      extension
+    );
+
+
+  if (traceMode) {
+
+    traceFrame =
+      loadFrameFromFolder(
+        "trace"
+      );
+  }
+
+
+  if (layerMode) {
+
+    layerFrame =
+      loadFrameFromFolder(
+        "layer"
+      );
+  }
+
+
+  println(
+    "Saving " + filename
+  );
+
+
+  saveFrame(
+    savePath(filename)
+  );
+
+
+  if (forwardLoopOn) {
+
+    forwardLoop.add(filename);
+  }
+
+
+  if (backwardLoopOn) {
+
+    backwardLoop.add(filename);
+  }
+}
+
+
+// ------------------------------------------------------------
+// FRAME NAME
+// ------------------------------------------------------------
+
+String frameName(
+  int index,
+  String prefix,
+  String extension
+) {
+
+  return prefix +
+    nf(index, 4) +
+    "." +
+    extension;
+}
+
+
+// ------------------------------------------------------------
+// FIND NEXT FRAME
+// ------------------------------------------------------------
+
+int findNextFreeFrameIndex(
+  String prefix,
+  String extension
+) {
+
+  int i = 1;
+
+
+  while (true) {
+
+    String filename =
+      frameName(
+        i,
+        prefix,
+        extension
+      );
+
+
+    File f =
+      new File(
+        savePath(filename)
+      );
+
+
+    if (!f.exists()) {
+
+      return i;
+    }
+
+
+    i++;
+  }
+}
+
+
+// ------------------------------------------------------------
+// NEW LAYER
+// ------------------------------------------------------------
+
+void setNewLayer() {
+
+  println(
+    "setNewLayer"
+  );
+
+
+  String foldername =
+    "layer";
+
+
+  File layerZero =
+    new File(
+      sketchPath() +
+      "/" +
+      foldername +
+      "/"
+    );
+
+
+  if (layerZero.exists()) {
+
+    println(
+      "layerZero exists"
+    );
+
+
+    int savecnt = 1;
+
+    boolean ok = false;
+
+
+    while (!ok) {
+
+      foldername =
+        "layer";
+
+
+      foldername +=
+        getFileNumberPrefix(
+          savecnt
+        );
+
+
+      foldername +=
+        savecnt;
+
+
+      println(
+        "foldername: " +
+        foldername
+      );
+
+
+      File fo =
+        new File(
+          sketchPath() +
+          "/" +
+          foldername +
+          "/"
+        );
+
+
+      if (!fo.exists()) {
+
+        ok = true;
+
+
+        layerZero.renameTo(
+          new File(
+            sketchPath() +
+            "/" +
+            foldername +
+            "/"
+          )
+        );
+      }
+
+
+      savecnt++;
+    }
+  }
+
+
+  File newLayerFolder =
+    new File(
+      sketchPath() +
+      "/layer/"
+    );
+
+
+  newLayerFolder.mkdir();
+
+
+  File path =
+    new File(
+      sketchPath()
+    );
+
+
+  File[] files =
+    path.listFiles();
+
+
+  for (
+    int i = 0;
+    i < files.length;
+    i++
+    ) {
+
+    println(i);
+
+
+    if (
+      files[i]
+      .getName()
+      .indexOf("png") > 0
+      ) {
+
+      println(
+        "png found"
+      );
+
+
+      files[i].renameTo(
+        new File(
+          newLayerFolder.getPath() +
+          "/" +
+          files[i].getName()
+        )
+      );
+    }
+  }
+}
+
+
+// ------------------------------------------------------------
+// SET LAST FRAME
+// ------------------------------------------------------------
+
+void setLastFrame(
+  String prefix,
+  String extension
+) {
+
+  int savecnt = 1;
+
+  boolean ok = false;
+
+  String filename = "";
+
+  File f = null;
+
+
+  while (!ok) {
+
+    filename =
+      prefix;
+
+
+    if (savecnt < 10) {
+
+      filename += "000";
+
+    } else if (savecnt < 100) {
+
+      filename += "00";
+
+    } else if (savecnt < 1000) {
+
+      filename += "0";
+    }
+
+
+    filename +=
+      "" +
+      savecnt +
+      "." +
+      extension;
+
+
+    f =
+      new File(
+        savePath(filename)
+      );
+
+
+    if (f.exists()) {
+
+      savecnt++;
+
+    } else if (
+      savecnt < 1 &&
+      !f.exists()
+      ) {
+
+      ok = true;
+
+    } else {
+
+      if (savecnt > 0) {
+
+        println(
+          "Trying to Open " +
+          filename
+        );
+
+        ok = true;
+      }
+    }
+  }
+
+
+  savecnt--;
+
+
+  if (savecnt < 10) {
+
+    prefix += "000";
+
+  } else if (savecnt < 100) {
+
+    prefix += "00";
+
+  } else if (savecnt < 1000) {
+
+    prefix += "0";
+  }
+
+
+  f =
+    new File(
+      savePath(
+        prefix +
+        savecnt +
+        "." +
+        extension
+      )
+    );
+
+
+  println(
+    f.getName()
+  );
+
+
+  if (f.exists()) {
+
+    println(
+      "Opening " +
+      filename
+    );
+
+
+    img =
+      loadImage(
+        f.getPath()
+      );
+
+
+    drawImageCentered(img);
+  }
+}
+
+
+// ------------------------------------------------------------
+// LOOPS
+// ------------------------------------------------------------
+
+void startForwardLoop() {
+
+  println(
+    "startForwardLoop"
+  );
+
+
+  forwardLoop.clear();
+
+  forwardLoopOn = true;
+}
+
+
+void renderForwardLoop() {
+
+  println(
+    "renderForwardLoop"
+  );
+
+
+  forwardLoopOn = false;
+
+
+  println(
+    "Forward loop OFF"
+  );
+
+
+  if (
+    forwardLoop == null ||
+    forwardLoop.size() < 1
+    ) {
+
+    println(
+      "nothing in forwardLoop"
+    );
+
+    return;
+  }
+
+
+  forwardLoop =
+    getRenderedLoop(
+      forwardLoop
+    );
+
+
+  tint(
+    255,
+    255
+  );
+
+
+  drawImageCentered(
+    loadImage(
+      forwardLoop.get(
+        forwardLoop.size() - 1
+      )
+    )
+  );
+
+
+  println(
+    "finished renderForwardLoop"
+  );
+}
+
+
+void startBackwardLoop() {
+
+  backwardLoop.clear();
+
+  backwardLoopOn = true;
+}
+
+
+void renderBackwardLoop() {
+
+  println(
+    "renderBackwardLoop"
+  );
+
+
+  backwardLoopOn = false;
+
+
+  println(
+    "Backward loop OFF"
+  );
+
+
+  if (
+    backwardLoop == null ||
+    backwardLoop.size() < 1
+    ) {
+
+    println(
+      "nothing in backwardLoop"
+    );
+
+    return;
+  }
+
+
+  backwardLoop =
+    getRenderedLoop(
+      backwardLoop
+    );
+
+
+  tint(
+    255,
+    255
+  );
+
+
+  drawImageCentered(
+    loadImage(
+      backwardLoop.get(
+        backwardLoop.size() - 1
+      )
+    )
+  );
+
+
+  println(
+    "finished renderBackwardLoop"
+  );
+}
+
+
+// ------------------------------------------------------------
+// RENDER LOOP
+// ------------------------------------------------------------
+
+ArrayList<String> getRenderedLoop(
+  ArrayList<String> loop
+) {
+
+  ArrayList<String> newLoop =
+    new ArrayList<String>();
+
+
+  String lastFilename =
+    loop
+    .get(loop.size() - 1)
+    .substring(5, 9);
+
+
+  int lastN =
+    parseInt(lastFilename);
+
+
+  String firstFilename =
+    loop
+    .get(0)
+    .substring(5, 9);
+
+
+  int firstN =
+    parseInt(firstFilename);
+
+
+  int diff =
+    lastN - firstN;
+
+
+  for (String s : loop) {
+
+    String oldFilename = s;
+
+
+    String n =
+      oldFilename.substring(
+        5,
+        9
+      );
+
+
+    int fileNumber =
+      parseInt(n);
+
+
+    fileNumber +=
+      diff + 1;
+
+
+    String newFilename =
+      "frame";
+
+
+    newFilename +=
+      getFileNumberPrefix(
+        fileNumber
+      );
+
+
+    newFilename +=
+      fileNumber;
+
+
+    newFilename +=
+      ".png";
+
+
+    copyFrame(
+      new File(
+        savePath(s)
+      ),
+      new File(
+        savePath(newFilename)
+      )
+    );
+
+
+    newLoop.add(
+      newFilename
+    );
+  }
+
+
+  return newLoop;
+}
+
+
+// ------------------------------------------------------------
+// FILE SELECTED
+// ------------------------------------------------------------
+
+void fileSelected(File file) {
+
+  img =
+    loadImage(
+      file.getPath()
+    );
+
+
+  println(
+    file.getName()
+  );
+
+
+  drawImageCentered(img);
+}
+
+
+// ------------------------------------------------------------
+// FRAME LOADING
+// ------------------------------------------------------------
+
+String getNextFrameFilename() {
+
+  int index =
+    findNextFreeFrameIndex(
+      "frame",
+      "png"
+    );
+
+
+  return frameName(
+    index,
+    "frame",
+    "png"
+  );
+}
+
+
+PImage loadFrameFromFolder(
+  String folder
+) {
+
+  String filename =
+    getNextFrameFilename();
+
+
+  File f =
+    new File(
+      sketchPath() +
+      "/" +
+      folder +
+      "/" +
+      filename
+    );
+
+
+  return f.exists()
+    ? loadImage(f.getPath())
+    : null;
+}
+
+
+// ------------------------------------------------------------
+// BACKGROUND COLOUR
+// ------------------------------------------------------------
+
+void flipBackgroundColour() {
+
+  if (bgColor == 0) {
+
+    bgColor = 255;
+
+  } else {
+
+    bgColor = 0;
+  }
+
+
+  background(bgColor);
+}
+
+
+// ------------------------------------------------------------
+// COLOUR ADJUSTMENT
+// ------------------------------------------------------------
+
+void incrementColour(char key) {
+
+  float r =
+    red(pen);
+
+  float g =
+    green(pen);
+
+  float b =
+    blue(pen);
+
+
+  if (key == '[') {
+
+    r =
+      max(
+        0,
+        r - 5
+      );
+
+    g =
+      max(
+        0,
+        g - 5
+      );
+
+    b =
+      max(
+        0,
+        b - 5
+      );
+
+
+  } else if (key == ']') {
+
+    r =
+      min(
+        255,
+        r + 5
+      );
+
+    g =
+      min(
+        255,
+        g + 5
+      );
+
+    b =
+      min(
+        255,
+        b + 5
+      );
+  }
+
+
+  pen =
+    color(
+      r,
+      g,
+      b,
+      alpha(pen)
+    );
+
+
+  pickerSelection = pen;
+
+  pickerAlpha =
+    int(alpha(pen));
+}
+
+
+// ------------------------------------------------------------
+// BRUSH SIZE
+// ------------------------------------------------------------
+
+void handleSizeKeys() {
+
+  switch (key) {
+
+  case '1':
+
+    brushSize = 5;
+
+    break;
+
+
+  case '2':
+
+    brushSize = 10;
+
+    break;
+
+
+  case '3':
+
+    brushSize = 15;
+
+    break;
+
+
+  case '4':
+
+    brushSize = 30;
+
+    break;
+
+
+  case '5':
+
+    brushSize = 45;
+
+    break;
+
+
+  case '6':
+
+    brushSize = 60;
+
+    break;
+
+
+  case '7':
+
+    brushSize += 20;
+
+    break;
+  }
+}
+
+
+// ------------------------------------------------------------
+// COLOUR KEYS
+// ------------------------------------------------------------
+
+void handleColorKeys() {
+
+  switch (key) {
+
+  case 'w':
+
+    pen = PEN_WHITE;
+
+    break;
+
+
+  case 'z':
+
+    pen = PEN_TRANSPARENT;
+
+    break;
+
+
+  case '0':
+
+    pen = PEN_BLACK;
+
+    break;
+
+
+  case '9':
+
+    pen = PEN_SHADE;
+
+    break;
+
+
+  case 'h':
+
+    pen = PEN_GREY;
+
+    break;
+
+
+  case 'r':
+
+    pen = PEN_RED;
+
+    break;
+
+
+  case 'b':
+
+    pen = PEN_BLUE;
+
+    break;
+
+
+  case 'g':
+
+    pen = PEN_GREEN;
+
+    break;
+
+
+  case 'y':
+
+    pen = PEN_YELLOW;
+
+    break;
+
+
+  case 'p':
+
+    pen = PEN_PURPLE;
+
+    break;
+
+
+  case 'o':
+
+    pen = PEN_ORANGE;
+
+    break;
+
+
+  case 'u':
+
+    pen = PEN_BROWN;
+
+    break;
+
+
+  case '[':
+
+  case ']':
+
+    incrementColour(key);
+
+    break;
+
+
+  case ',':
+
+    incrementAlpha(-5);
+
+    break;
+
+
+  case '.':
+
+    incrementAlpha(5);
+
+    break;
+
+
+  case '-':
+
+    incrementAlpha(-100);
+
+    break;
+
+
+  case '=':
+
+    incrementAlpha(100);
+
+    break;
+  }
+
+
+  pickerSelection = pen;
+
+  pickerAlpha =
+    int(alpha(pen));
+}
+
+
+// ------------------------------------------------------------
+// RENDER KEYS
+// ------------------------------------------------------------
+
+void handleRenderKeys() {
+
+  switch (keyCode) {
+
+  case ENTER:
+
+    createFrames();
+
+    break;
+
+
+  case SHIFT:
+
+    setBg();
+
+    break;
+
+
+  case CONTROL:
+
+    next();
+
+    break;
+
+
+  case LEFT:
+
+    startForwardLoop();
+
+    break;
+
+
+  case RIGHT:
+
+    renderForwardLoop();
+
+    break;
+
+
+  case UP:
+
+    startBackwardLoop();
+
+    break;
+
+
+  case DOWN:
+
+    renderBackwardLoop();
+
+    break;
+  }
+}
+
+
+// ------------------------------------------------------------
+// MODE KEYS
+// ------------------------------------------------------------
+
+void handleModeKeys() {
+
+  switch (key) {
+
+  case 's':
+
+    mode =
+      DrawMode.SINGLE;
+
+    break;
+
+
+  case 'm':
+
+    mode =
+      DrawMode.MIRROR;
+
+    break;
+
+
+  case 'l':
+
+    mode =
+      DrawMode.LAKE;
+
+    break;
+
+
+  case 'i':
+
+    mode =
+      DrawMode.INDIA;
+
+    break;
+
+
+  case 't':
+
+    setTraceMode();
+
+    break;
+
+
+  case 'c':
+
+    setLayerMode();
+
+    break;
+
+
+  case 'q':
+
+    traceOverMode =
+      !traceOverMode;
+
+    break;
+
+
+  case 'k':
+
+    flipBackgroundColour();
+
+    break;
+
+
+  case 'a':
+
+    setNewLayer();
+
+    break;
+
+
+  case 'x':
+
+    background(bgColor);
+
+    break;
+
+
+  case 'v':
+
+    toggleColourPicker();
+
+    break;
+
+
+  // ----------------------------------------------------------
+  // FILL MODE
+  // ----------------------------------------------------------
+
+  case 'f':
+
+    fillMode =
+      !fillMode;
+
+
+    println(
+      "FILL MODE " +
+      (fillMode ? "ON" : "OFF")
+    );
+
+
+    break;
+  }
+}
+
+
+// ------------------------------------------------------------
+// LAYER MODE
+// ------------------------------------------------------------
+
+private void setLayerMode() {
+
+  println(
+    "setLayerMode"
+  );
+
+
+  if (layerMode) {
+
+    layerMode = false;
+
+
+    if (
+      !traceMode &&
+      bg != null
+      ) {
+
+      drawImageCentered(bg);
+
+
+    } else if (
+      traceMode &&
+      traceFrame != null
+      ) {
+
+      tint(
+        255,
+        160
+      );
+
+      drawImageCentered(
+        traceFrame
+      );
+
+
+    } else {
+
+      background(bgColor);
+    }
+
+
+  } else {
+
+    layerMode = true;
+
+
+    layerFrame =
+      loadFrameFromFolder(
+        "layer"
+      );
+
+
+    drawImageCentered(
+      layerFrame
+    );
+  }
+}
+
+
+// ------------------------------------------------------------
+// TRACE MODE
+// ------------------------------------------------------------
+
+private void setTraceMode() {
+
+  println(
+    "setTraceMode"
+  );
+
+
+  if (traceMode) {
+
+    traceMode = false;
+
+
+    if (
+      !layerMode &&
+      bg != null
+      ) {
+
+      drawImageCentered(bg);
+
+
+    } else if (
+      layerMode &&
+      layerFrame != null
+      ) {
+
+      tint(
+        255,
+        160
+      );
+
+      drawImageCentered(
+        layerFrame
+      );
+
+
+    } else {
+
+      background(bgColor);
+    }
+
+
+  } else {
+
+    traceMode = true;
+
+
+    traceFrame =
+      loadFrameFromFolder(
+        "trace"
+      );
+
+
+    tint(
+      255,
+      160
+    );
+
+
+    drawImageCentered(
+      traceFrame
+    );
+
+
+    stroke(
+      bgColor,
+      100
+    );
+
+
+    fill(
+      bgColor,
+      100
+    );
+
+
+    rect(
+      0,
+      0,
+      width,
+      height
+    );
+  }
+}
+
+
+// ------------------------------------------------------------
+// FILE COPYING
+// ------------------------------------------------------------
+
+String getFileNumberPrefix(
+  int fileNumber
+) {
+
+  if (fileNumber < 10) {
+
+    return "000";
+
+  } else if (fileNumber < 100) {
+
+    return "00";
+
+  } else if (fileNumber < 1000) {
+
+    return "0";
+  }
+
+
+  return "";
+}
+
+
+private static void copyFrame(
+  File orig,
+  File next
+) {
+
+  InputStream is =
+    createInput(orig);
+
+
+  OutputStream os =
+    createOutput(next);
+
+
+  byte[] buffer =
+    new byte[1024];
+
+
+  int length;
+
+
+  try {
+
+    while (
+      (length = is.read(buffer)) > 0
+      ) {
+
+      os.write(
+        buffer,
+        0,
+        length
+      );
+    }
+
+
+  } catch (IOException e) {
+
+    e.printStackTrace();
+
+
+  } finally {
+
+    try {
+
+      if (is != null) {
+        is.close();
+      }
+
+
+      if (os != null) {
+        os.close();
+      }
+
+
+    } catch (IOException e) {
+
+      e.printStackTrace();
+    }
+  }
+}
+
+
+// ------------------------------------------------------------
+// KEY PRESSED
+// ------------------------------------------------------------
+
+void keyPressed() {
+
+  handleSizeKeys();
+
+  handleColorKeys();
+
+  handleRenderKeys();
+
+  handleModeKeys();
+}
